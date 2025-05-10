@@ -46,22 +46,15 @@ def register():
         user = User(
             username=form.username.data,
             email=form.email.data,
-            role=form.role.data
+            role='student'  # Default role is student, can be changed by admin later
         )
         user.set_password(form.password.data)
         
-        # Create profile based on role
-        if form.role.data == 'student':
-            profile = Student(
-                user=user,
-                full_name=form.full_name.data
-            )
-        else:  # instructor
-            profile = Instructor(
-                user=user,
-                full_name=form.full_name.data,
-                expertise=form.expertise.data
-            )
+        # Create student profile for all new users
+        profile = Student(
+            user=user,
+            full_name=form.full_name.data
+        )
         
         db.session.add(user)
         db.session.add(profile)

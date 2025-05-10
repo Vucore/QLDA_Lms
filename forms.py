@@ -16,8 +16,8 @@ class RegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
     password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
     full_name = StringField('Full Name', validators=[DataRequired(), Length(max=120)])
-    role = SelectField('Role', choices=[('student', 'Student'), ('instructor', 'Instructor')], validators=[DataRequired()])
-    expertise = StringField('Expertise (for instructors)', validators=[Optional(), Length(max=120)])
+    # Role is now assigned as 'student' by default and can only be changed by admins
+    expertise = StringField('Expertise (optional)', validators=[Optional(), Length(max=120)])
     submit = SubmitField('Register')
     
     def validate_username(self, username):
