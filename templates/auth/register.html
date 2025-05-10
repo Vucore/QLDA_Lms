@@ -105,20 +105,8 @@
             </div>
             
             <div class="mb-3">
-                <label for="role" class="form-label">I am registering as</label>
-                {{ form.role(class_="form-select", id="role") }}
-                {% if form.role.errors %}
-                <div class="invalid-feedback d-block">
-                    {% for error in form.role.errors %}
-                    {{ error }}
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-            
-            <div class="mb-3 instructor-field" id="expertise-field" style="display: none;">
-                <label for="expertise" class="form-label">Expertise (For Instructors)</label>
-                {{ form.expertise(class_="form-control", id="expertise", placeholder="Your area of expertise") }}
+                <label for="expertise" class="form-label">Area of Interest (Optional)</label>
+                {{ form.expertise(class_="form-control", id="expertise", placeholder="Your areas of interest") }}
                 {% if form.expertise.errors %}
                 <div class="invalid-feedback d-block">
                     {% for error in form.expertise.errors %}
@@ -158,23 +146,34 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const roleSelect = document.getElementById('role');
-        const expertiseField = document.getElementById('expertise-field');
+        // Password visibility toggle
+        const toggleBtns = document.querySelectorAll('.password-toggle');
+        toggleBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const input = this.parentNode.querySelector('input');
+                const icon = this.querySelector('i');
+                
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
         
-        // Show/hide expertise field based on role selection
-        function toggleExpertiseField() {
-            if (roleSelect.value === 'instructor') {
-                expertiseField.style.display = 'block';
-            } else {
-                expertiseField.style.display = 'none';
+        // Form validation
+        const form = document.querySelector('.needs-validation');
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
             }
-        }
-        
-        // Initial toggle
-        toggleExpertiseField();
-        
-        // Toggle on change
-        roleSelect.addEventListener('change', toggleExpertiseField);
+            form.classList.add('was-validated');
+        });
     });
 </script>
 {% endblock %}
