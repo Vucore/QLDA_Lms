@@ -242,13 +242,27 @@ def course_detail(course_id):
 def course_create():
     form = CourseForm()
     
+    # Check if the current user is actually an instructor
+    if current_user.role == 'instructor' and not current_user.instructor_profile:
+        flash('Your instructor profile has not been completely set up. Please contact an administrator.', 'warning')
+        return redirect(url_for('courses'))
+    
     if form.validate_on_submit():
         instructor = None
         if current_user.role == 'instructor':
             instructor = current_user.instructor_profile
-        else:  # admin creating course
+        elif current_user.role == 'admin':
             # TODO: implement instructor selection for admin
+            # For now, show a message that this feature is coming soon
             flash('As admin, you need to assign an instructor for this course. This feature is not implemented yet.', 'warning')
+            return redirect(url_for('courses'))
+        else:
+            # This shouldn't happen due to the role_required decorator, but just in case
+            flash('You do not have permission to create courses.', 'danger')
+            return redirect(url_for('courses'))
+        
+        if not instructor:
+            flash('Cannot create course: No instructor profile found.', 'danger')
             return redirect(url_for('courses'))
         
         course = Course(
@@ -781,19 +795,26 @@ def admin_user_edit(user_id):
             user.role = form.role.data
             
             # Create new profile if needed
-            if old_role != 'student' and form.role.data == 'student':
-                profile = Student(
-                    user=user,
-                    full_name=form.full_name.data
-                )
-                db.session.add(profile)
-            elif old_role != 'instructor' and form.role.data == 'instructor':
-                profile = Instructor(
-                    user=user,
-                    full_name=form.full_name.data,
-                    expertise=form.expertise.data
-                )
-                db.session.add(profile)
+            if form.role.data == 'student':
+                if not user.student_profile:
+                    profile = Student(
+                        user=user,
+                        full_name=form.full_name.data
+                    )
+                    db.session.add(profile)
+                else:
+                    user.student_profile.full_name = form.full_name.data
+            elif form.role.data == 'instructor':
+                if not user.instructor_profile:
+                    profile = Instructor(
+                        user=user,
+                        full_name=form.full_name.data,
+                        expertise=form.expertise.data
+                    )
+                    db.session.add(profile)
+                else:
+                    user.instructor_profile.full_name = form.full_name.data
+                    user.instructor_profile.expertise = form.expertise.data
         else:
             # Just update existing profile
             if user.is_student() and user.student_profile:
