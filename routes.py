@@ -149,6 +149,24 @@ def student_dashboard():
                            recent_submissions=recent_submissions,
                            upcoming_schedules=upcoming_schedules)
 
+@app.route('/student/courses')
+@login_required
+@role_required('student')
+def student_courses():
+    # Get student profile
+    student = current_user.student_profile
+    
+    # Get enrolled courses
+    enrolled_courses = student.enrolled_courses
+    
+    # Get recommended courses (courses not enrolled in)
+    recommended_courses = Course.query.filter(~Course.id.in_([c.id for c in enrolled_courses])).limit(3).all()
+    
+    return render_template('courses/student_courses.html',
+                          student=student,
+                          enrolled_courses=enrolled_courses,
+                          recommended_courses=recommended_courses)
+
 @app.route('/dashboard/instructor')
 @login_required
 @role_required('instructor')
@@ -186,6 +204,20 @@ def instructor_dashboard():
                            recent_assignments=recent_assignments,
                            submissions_needing_grading=submissions_needing_grading,
                            upcoming_schedules=upcoming_schedules)
+
+@app.route('/instructor/courses')
+@login_required
+@role_required('instructor')
+def instructor_courses():
+    # Get instructor profile
+    instructor = current_user.instructor_profile
+    
+    # Get instructor's courses
+    courses = instructor.courses.all()
+    
+    return render_template('courses/instructor_courses.html',
+                          instructor=instructor,
+                          courses=courses)
 
 @app.route('/dashboard/admin')
 @login_required
@@ -344,6 +376,32 @@ def course_unenroll(course_id):
         flash('You are not enrolled in this course.', 'warning')
     
     return redirect(url_for('course_detail', course_id=course.id))
+
+@app.route('/courses/<int:course_id>/delete', methods=['POST'])
+@login_required
+def course_delete(course_id):
+    course = Course.query.get_or_404(course_id)
+    
+    # Check permissions
+    if current_user.role == 'instructor' and course.instructor_id != current_user.instructor_profile.id:
+        flash('You do not have permission to delete this course.', 'danger')
+        return redirect(url_for('course_detail', course_id=course.id))
+    
+    if current_user.role == 'student':
+        flash('Students cannot delete courses.', 'danger')
+        return redirect(url_for('course_detail', course_id=course.id))
+    
+    # Delete the course
+    db.session.delete(course)
+    db.session.commit()
+    
+    flash('Course deleted successfully!', 'success')
+    
+    # Redirect based on user role
+    if current_user.role == 'instructor':
+        return redirect(url_for('instructor_courses'))
+    else:  # admin
+        return redirect(url_for('courses'))
 
 # Lesson routes
 @app.route('/courses/<int:course_id>/lessons/create', methods=['GET', 'POST'])
