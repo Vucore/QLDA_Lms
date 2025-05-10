@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Instructor Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar">
+                <div class="sidebar-user">
+                    <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg" class="mb-3">
+                        <circle cx="40" cy="40" r="40" fill="#f0f0f0"/>
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30" fill="#2a41e8">
+                            {{ instructor.full_name[:1] }}
+                        </text>
+                    </svg>
+                    <h5>{{ instructor.full_name }}</h5>
+                    <p>Instructor</p>
+                </div>
+                
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="{{ url_for('instructor_dashboard') }}" class="active">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-book"></i> My Courses
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-users"></i> Students
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-tasks"></i> Assignments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-calendar-alt"></i> Schedule
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-chart-bar"></i> Analytics
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('profile') }}">
+                            <i class="fas fa-user-cog"></i> Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Instructor Dashboard</h2>
+                <div>
+                    <a href="{{ url_for('course_create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Course
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>{{ courses|length }}</h2>
+                        <p>Active Courses</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>
+                            {% set student_count = 0 %}
+                            {% for course in courses %}
+                                {% set student_count = student_count + course.enrolled_students.count() %}
+                            {% endfor %}
+                            {{ student_count }}
+                        </h2>
+                        <p>Total Students</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>{{ submissions_needing_grading|length }}</h2>
+                        <p>Pending Reviews</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>4.8</h2>
+                        <p>Average Rating</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- My Courses -->
+            <div class="dashboard-card mb-4">
+                <h4>My Courses</h4>
+                
+                {% if courses %}
+                <div class="row g-4">
+                    {% for course in courses %}
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ course.name }}</h5>
+                                <p class="card-text text-muted">{{ course.description|truncate(100) }}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <span class="badge bg-primary">{{ course.enrolled_students.count() }} Students</span>
+                                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-sm btn-outline-primary">Manage</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-book fa-3x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">You haven't created any courses yet</h5>
+                    <p>Start creating your first course and share your knowledge with students.</p>
+                    <a href="{{ url_for('course_create') }}" class="btn btn-primary mt-2">Create First Course</a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Submissions Needing Grading -->
+            <div class="dashboard-card mb-4">
+                <h4>Submissions Needing Grading</h4>
+                
+                {% if submissions_needing_grading %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Assignment</th>
+                                <th>Course</th>
+                                <th>Submitted</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in submissions_needing_grading %}
+                            <tr>
+                                <td>{{ submission.student.full_name }}</td>
+                                <td>{{ submission.assignment.title }}</td>
+                                <td>{{ submission.assignment.course.name }}</td>
+                                <td>{{ submission.submitted_at.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <a href="{{ url_for('submission_grade', submission_id=submission.id) }}" class="btn btn-sm btn-primary">Grade</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="text-muted">No submissions waiting for review</h5>
+                    <p>You're all caught up! Check back later for new submissions.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Recent Assignments -->
+            <div class="dashboard-card mb-4">
+                <h4>Recent Assignments</h4>
+                
+                {% if recent_assignments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Course</th>
+                                <th>Deadline</th>
+                                <th>Submissions</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in recent_assignments %}
+                            <tr>
+                                <td>{{ assignment.title }}</td>
+                                <td>{{ assignment.course.name }}</td>
+                                <td>{{ assignment.deadline.strftime('%b %d, %Y') }}</td>
+                                <td>{{ assignment.submissions.count() }} / {{ assignment.course.enrolled_students.count() }}</td>
+                                <td>
+                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No assignments created yet</h5>
+                    <p>Create assignments to test your students' knowledge and track their progress.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Upcoming Live Classes -->
+            <div class="dashboard-card">
+                <h4>Upcoming Live Classes</h4>
+                
+                {% if upcoming_schedules %}
+                {% for schedule in upcoming_schedules %}
+                <div class="event-item">
+                    <div class="event-date">
+                        <span class="day">{{ schedule.date.strftime('%d') }}</span>
+                        <span class="month">{{ schedule.date.strftime('%b') }}</span>
+                    </div>
+                    <div class="event-info">
+                        <h6>{{ schedule.topic }}</h6>
+                        <p class="mb-1">{{ schedule.course.name }}</p>
+                        <p class="mb-0">
+                            <i class="fas fa-clock me-1"></i>{{ schedule.start_time.strftime('%I:%M %p') }} - {{ schedule.end_time.strftime('%I:%M %p') }}
+                            {% if schedule.location %}
+                            <i class="fas fa-map-marker-alt ms-3 me-1"></i>{{ schedule.location }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="ms-auto align-self-center">
+                        <button class="btn btn-sm btn-primary">Start Class</button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No upcoming live classes</h5>
+                    <p>Schedule live classes to interact with your students in real-time.</p>
+                    <button class="btn btn-outline-primary mt-2">Schedule a Class</button>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Student Distribution Chart (Hidden for now)
+            <div class="dashboard-card mt-4">
+                <h4>Student Distribution</h4>
+                <canvas id="student-distribution" height="250"></canvas>
+            </div>
+            -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chart-config.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize student distribution chart
+        const studentData = {
+            labels: ['Web Development', 'Design', 'Business', 'Marketing', 'Photography'],
+            values: [45, 25, 15, 10, 5]
+        };
+        
+        if (document.getElementById('student-distribution')) {
+            createStudentDistributionChart('student-distribution', studentData);
+        }
+    });
+</script>
+{% endblock %}

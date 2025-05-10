@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Transform Your Future with Online Learning{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 hero-content">
+                <h1>Transform Your Future with Online Learning</h1>
+                <p class="lead">Access over 1000+ courses from top instructors worldwide. Learn at your own pace and earn certifications.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('courses') }}" class="btn btn-primary btn-lg">Get Started</a>
+                    <a href="{{ url_for('courses') }}" class="btn btn-outline-secondary btn-lg">Browse Courses</a>
+                </div>
+            </div>
+            <div class="col-lg-6 mt-4 mt-lg-0">
+                <!-- Hero Image -->
+                <div class="hero-image text-center">
+                    <svg class="img-fluid" xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300">
+                        <rect width="500" height="300" fill="#f0f0f0"/>
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">Hero Image Placeholder</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Courses -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Featured Courses</h2>
+        <div class="row g-4">
+            {% for course in featured_courses %}
+            <div class="col-md-4 course-card-wrapper">
+                <div class="card course-card h-100">
+                    {% if course.image_url %}
+                    <div class="card-img-top">
+                        <!-- Using SVG placeholder -->
+                        <svg width="100%" height="180" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="100%" height="100%" fill="#f0f0f0"/>
+                            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">Course Image</text>
+                        </svg>
+                    </div>
+                    {% else %}
+                    <div class="card-img-top">
+                        <!-- Default SVG placeholder -->
+                        <svg width="100%" height="180" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="100%" height="100%" fill="#f0f0f0"/>
+                            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">Course Image</text>
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary">Popular</span>
+                            <div class="course-rating">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                                <span class="ms-1">4.5</span>
+                            </div>
+                        </div>
+                        <h5 class="card-title">{{ course.name }}</h5>
+                        <p class="card-text text-muted">{{ course.description|truncate(100) }}</p>
+                        <p class="course-instructor">
+                            <i class="fas fa-user-tie me-1"></i> {{ course.instructor.full_name }}
+                        </p>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center">
+                        <span class="course-price">$99.99</span>
+                        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-sm btn-outline-primary">View Course</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center">
+                <p>No featured courses available at the moment.</p>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-5">
+            <a href="{{ url_for('courses') }}" class="btn btn-primary">View All Courses</a>
+        </div>
+    </div>
+</section>
+
+<!-- Popular Categories -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Popular Categories</h2>
+        <div class="row g-4">
+            <div class="col-lg-3 col-sm-6">
+                <div class="feature-item">
+                    <div class="category-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h5>Programming</h5>
+                    <p class="text-muted">200+ Courses</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-sm-6">
+                <div class="feature-item">
+                    <div class="category-icon">
+                        <i class="fas fa-paint-brush"></i>
+                    </div>
+                    <h5>Design</h5>
+                    <p class="text-muted">150+ Courses</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-sm-6">
+                <div class="feature-item">
+                    <div class="category-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h5>Business</h5>
+                    <p class="text-muted">100+ Courses</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-sm-6">
+                <div class="feature-item">
+                    <div class="category-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <h5>Photography</h5>
+                    <p class="text-muted">50+ Courses</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Us -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Why Choose Us</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h4 class="feature-title">Expert Instructors</h4>
+                    <p class="text-muted">Learn from industry professionals with years of experience.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-laptop-house"></i>
+                    </div>
+                    <h4 class="feature-title">Flexible Learning</h4>
+                    <p class="text-muted">Study at your own pace, anywhere, anytime.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <h4 class="feature-title">Certificates</h4>
+                    <p class="text-muted">Earn recognized certificates upon course completion.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">What Our Students Say</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="d-flex align-items-center mb-3">
+                        <svg class="testimonial-avatar" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="30" cy="30" r="30" fill="#f0f0f0"/>
+                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">EB</text>
+                        </svg>
+                        <div>
+                            <h6 class="mb-0">Emily Brown</h6>
+                            <p class="text-muted mb-0">Web Development Student</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        "The courses on this platform are outstanding. The instructors are very knowledgeable. I've learned so much in just a few months!"
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="d-flex align-items-center mb-3">
+                        <svg class="testimonial-avatar" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="30" cy="30" r="30" fill="#f0f0f0"/>
+                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">DC</text>
+                        </svg>
+                        <div>
+                            <h6 class="mb-0">David Chen</h6>
+                            <p class="text-muted mb-0">UX/UI Design Student</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        "I took the UX/UI course to build a strong portfolio. I landed my dream job thanks to these courses!"
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="d-flex align-items-center mb-3">
+                        <svg class="testimonial-avatar" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="30" cy="30" r="30" fill="#f0f0f0"/>
+                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">SR</text>
+                        </svg>
+                        <div>
+                            <h6 class="mb-0">Sophia Rodriguez</h6>
+                            <p class="text-muted mb-0">Digital Marketing Student</p>
+                        </div>
+                    </div>
+                    <p class="testimonial-text">
+                        "The instructors are highly skilled professionals. I highly recommend EduLearn for busy professionals."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="cta-section">
+    <div class="container">
+        <h2>Start Your Learning Journey Today</h2>
+        <p class="lead mb-4">Join thousands of students worldwide and transform your career with our expert-led courses.</p>
+        <div>
+            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">Get Started</a>
+            <a href="{{ url_for('courses') }}" class="btn btn-outline-light btn-lg">View Courses</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

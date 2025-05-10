@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Assignments{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">My Assignments</h1>
+            
+            <ul class="nav nav-tabs mb-4" id="assignmentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button" role="tab" aria-controls="upcoming" aria-selected="true">Upcoming</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="past-tab" data-bs-toggle="tab" data-bs-target="#past" type="button" role="tab" aria-controls="past" aria-selected="false">Past</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="false">All</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="assignmentTabsContent">
+                <!-- Upcoming Assignments -->
+                <div class="tab-pane fade show active" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab">
+                    {% if upcoming_assignments %}
+                    {% for assignment in upcoming_assignments %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ assignment.title }}</h5>
+                                    <p class="text-muted mb-0">{{ assignment.course.name }}</p>
+                                </div>
+                                <span class="badge bg-primary">Due: {{ assignment.deadline.strftime('%b %d, %Y') }}</span>
+                            </div>
+                            <p class="card-text">{{ assignment.description|truncate(150) }}</p>
+                            
+                            {% if current_user.is_student() %}
+                                {% set submission = get_submission(assignment.id, current_user.student_profile.id) %}
+                                {% if submission %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div>
+                                        <span class="badge bg-success me-2">Submitted</span>
+                                        <span class="text-muted small">on {{ submission.submitted_at.strftime('%b %d, %Y') }}</span>
+                                    </div>
+                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                </div>
+                                {% else %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div>
+                                        <span class="badge bg-warning me-2">Not Submitted</span>
+                                        <span class="text-muted small deadline-countdown" data-deadline="{{ assignment.deadline.isoformat() }}">
+                                            {{ (assignment.deadline - now).days }} days left
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <a href="{{ url_for('submission_create', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary me-2">Submit</a>
+                                        <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-users me-1"></i>{{ assignment.submissions.count() }} submissions
+                                        </span>
+                                    </div>
+                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard-check fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No upcoming assignments</h4>
+                        <p>You're all caught up! Check back later for new assignments.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Past Assignments -->
+                <div class="tab-pane fade" id="past" role="tabpanel" aria-labelledby="past-tab">
+                    {% if past_assignments %}
+                    {% for assignment in past_assignments %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ assignment.title }}</h5>
+                                    <p class="text-muted mb-0">{{ assignment.course.name }}</p>
+                                </div>
+                                <span class="badge bg-secondary">Due: {{ assignment.deadline.strftime('%b %d, %Y') }}</span>
+                            </div>
+                            <p class="card-text">{{ assignment.description|truncate(150) }}</p>
+                            
+                            {% if current_user.is_student() %}
+                                {% set submission = get_submission(assignment.id, current_user.student_profile.id) %}
+                                {% if submission %}
+                                    {% if submission.grade %}
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            <span class="badge {% if submission.grade.score >= 70 %}bg-success{% elif submission.grade.score >= 50 %}bg-warning{% else %}bg-danger{% endif %} me-2">
+                                                Grade: {{ submission.grade.score }}/100
+                                            </span>
+                                        </div>
+                                        <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                    </div>
+                                    {% else %}
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            <span class="badge bg-info me-2">Grading Pending</span>
+                                        </div>
+                                        <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                    </div>
+                                    {% endif %}
+                                {% else %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div>
+                                        <span class="badge bg-danger me-2">Not Submitted</span>
+                                    </div>
+                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <div>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-users me-1"></i>{{ assignment.submissions.count() }} submissions
+                                        </span>
+                                    </div>
+                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-history fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No past assignments</h4>
+                        <p>You don't have any completed assignments yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- All Assignments -->
+                <div class="tab-pane fade" id="all" role="tabpanel" aria-labelledby="all-tab">
+                    {% if all_assignments %}
+                    {% for assignment in all_assignments %}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ assignment.title }}</h5>
+                                    <p class="text-muted mb-0">{{ assignment.course.name }}</p>
+                                </div>
+                                <span class="badge {% if assignment.deadline < now %}bg-secondary{% else %}bg-primary{% endif %}">
+                                    Due: {{ assignment.deadline.strftime('%b %d, %Y') }}
+                                </span>
+                            </div>
+                            <p class="card-text">{{ assignment.description|truncate(150) }}</p>
+                            
+                            <div class="d-flex justify-content-end align-items-center mt-3">
+                                <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard-list fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No assignments found</h4>
+                        <p>There are no assignments available for your courses.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Countdown for deadlines
+        const deadlineCounters = document.querySelectorAll('.deadline-countdown');
+        
+        deadlineCounters.forEach(counter => {
+            const deadline = new Date(counter.getAttribute('data-deadline')).getTime();
+            
+            // Update the countdown every second
+            const countdownInterval = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = deadline - now;
+                
+                // Time calculations
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                
+                // Display the result
+                if (distance > 0) {
+                    counter.innerHTML = `${days}d ${hours}h ${minutes}m remaining`;
+                } else {
+                    clearInterval(countdownInterval);
+                    counter.innerHTML = 'Deadline passed';
+                    counter.classList.add('text-danger');
+                }
+            }, 1000);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

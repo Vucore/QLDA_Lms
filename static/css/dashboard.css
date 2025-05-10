@@ -1,0 +1,269 @@
+/* Dashboard specific styling */
+
+.dashboard-container {
+  padding: 20px 0;
+}
+
+.sidebar {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  position: sticky;
+  top: 20px;
+}
+
+.sidebar-user {
+  text-align: center;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.sidebar-user img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.sidebar-user h5 {
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.sidebar-user p {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li {
+  margin-bottom: 10px;
+}
+
+.sidebar-menu a {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  color: #333;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-menu a:hover,
+.sidebar-menu a.active {
+  background-color: #f5f7fa;
+  color: #2a41e8;
+}
+
+.sidebar-menu a i {
+  margin-right: 10px;
+}
+
+.dashboard-card {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+  height: 100%;
+}
+
+.dashboard-card h4 {
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.dashboard-card .card-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.dashboard-card .text-muted {
+  font-size: 0.9rem;
+}
+
+.stats-card {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.stats-card h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: #2a41e8;
+}
+
+.stats-card p {
+  color: #6c757d;
+  margin-bottom: 0;
+}
+
+.course-progress {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.course-progress h5 {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.progress {
+  height: 10px;
+  border-radius: 5px;
+  margin-bottom: 5px;
+}
+
+.upcoming-events {
+  margin-top: 20px;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
+}
+
+.event-date {
+  width: 60px;
+  height: 60px;
+  background-color: #2a41e8;
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.event-date .day {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.event-date .month {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.event-info {
+  flex: 1;
+}
+
+.event-info h6 {
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.event-info p {
+  margin-bottom: 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.assignment-item {
+  padding: 15px;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
+}
+
+.assignment-item h6 {
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.assignment-item .deadline {
+  color: #dc3545;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.dashboard-tabs .nav-item .nav-link {
+  color: #6c757d;
+  font-weight: 600;
+  padding: 10px 15px;
+}
+
+.dashboard-tabs .nav-item .nav-link.active {
+  color: #2a41e8;
+  background-color: transparent;
+  border-bottom: 2px solid #2a41e8;
+}
+
+.learning-goals {
+  margin-top: 20px;
+}
+
+.goal-item {
+  margin-bottom: 15px;
+}
+
+.goal-title {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.goal-title h6 {
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+.goal-title span {
+  color: #2a41e8;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .sidebar {
+    position: static;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-card h2 {
+    font-size: 2rem;
+  }
+  
+  .event-date {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .event-date .day {
+    font-size: 1.2rem;
+  }
+  
+  .dashboard-tabs .nav-item .nav-link {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+}

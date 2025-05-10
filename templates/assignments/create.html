@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Create Assignment{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('courses') }}">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.name }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% if assignment %}Edit{% else %}Create{% endif %} Assignment</li>
+                </ol>
+            </nav>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0">{% if assignment %}Edit{% else %}Create New{% endif %} Assignment</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
+                            {{ form.title(class_="form-control", id="title", placeholder="Enter assignment title") }}
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.title.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            {{ form.description(class_="form-control", id="description", rows=5, placeholder="Enter assignment description and instructions") }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Provide clear instructions for what students need to submit.</div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="deadline" class="form-label">Deadline Date <span class="text-danger">*</span></label>
+                                {{ form.deadline(class_="form-control", id="deadline", type="date") }}
+                                {% if form.deadline.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.deadline.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="deadline_time" class="form-label">Deadline Time <span class="text-danger">*</span></label>
+                                {{ form.deadline_time(class_="form-control", id="deadline_time", type="time") }}
+                                {% if form.deadline_time.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.deadline_time.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="form-text">The assignment will be due on this date and time.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h5>Assignment Settings</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label d-block">Submission Type</label>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="submission_type" id="type_text" value="text" checked>
+                                            <label class="form-check-label" for="type_text">Text Entry</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="submission_type" id="type_file" value="file">
+                                            <label class="form-check-label" for="type_file">File Upload</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="submission_type" id="type_both" value="both">
+                                            <label class="form-check-label" for="type_both">Both</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label d-block">Grading Settings</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="allow_late" id="allow_late">
+                                            <label class="form-check-label" for="allow_late">Allow late submissions</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="send_reminder" id="send_reminder" checked>
+                                            <label class="form-check-label" for="send_reminder">Send deadline reminders to students</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                            {{ form.submit(class_="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if assignment %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">These actions cannot be undone. Please be certain.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-danger mb-1">Delete Assignment</h6>
+                            <p class="text-muted mb-0 small">This will permanently delete this assignment and all student submissions.</p>
+                        </div>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            Delete Assignment
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Delete Confirmation Modal -->
+            <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm Deletion</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete the assignment <strong>{{ assignment.title }}</strong>?</p>
+                            <p>This action <strong>cannot</strong> be undone and will delete all student submissions for this assignment.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form action="#" method="POST">
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" class="btn btn-danger">Delete Permanently</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

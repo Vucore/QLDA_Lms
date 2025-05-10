@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">My Profile</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                {{ form.username(class_="form-control", id="username") }}
+                                {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.username.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                {{ form.email(class_="form-control", id="email") }}
+                                {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label">Full Name</label>
+                            {{ form.full_name(class_="form-control", id="full_name") }}
+                            {% if form.full_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.full_name.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            {{ form.role(class_="form-control", id="role", disabled="disabled") }}
+                        </div>
+                        
+                        {% if current_user.is_instructor() %}
+                        <div class="mb-3" id="expertise-field">
+                            <label for="expertise" class="form-label">Expertise</label>
+                            {{ form.expertise(class_="form-control", id="expertise", placeholder="Your area of expertise") }}
+                            {% if form.expertise.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.expertise.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary me-2">Cancel</a>
+                            {{ form.submit(class_="btn btn-primary", value="Save Changes") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">Password</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">To change your password, please use the form below.</p>
+                    
+                    <form method="POST" action="#" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            <div class="form-text">Password must be at least 8 characters long.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">Change Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">Account Settings</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label d-block">Email Notifications</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="course_updates" checked>
+                            <label class="form-check-label" for="course_updates">Course updates</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="assignment_reminders" checked>
+                            <label class="form-check-label" for="assignment_reminders">Assignment reminders</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="new_courses">
+                            <label class="form-check-label" for="new_courses">New course announcements</label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
