@@ -83,7 +83,15 @@ class ScheduleForm(FlaskForm):
 class UserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=4, max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[Optional(), Length(min=8)])
+    password2 = PasswordField('Confirm Password', validators=[Optional(), EqualTo('password')])
     full_name = StringField('Full Name', validators=[DataRequired(), Length(max=120)])
     role = SelectField('Role', choices=[('student', 'Student'), ('instructor', 'Instructor'), ('admin', 'Admin')], validators=[DataRequired()])
     expertise = StringField('Expertise (for instructors)', validators=[Optional(), Length(max=120)])
     submit = SubmitField('Save User')
+    
+    def validate_password2(self, password2):
+        if self.password.data and not password2.data:
+            raise ValidationError('Please confirm your password.')
+        if not self.password.data and password2.data:
+            raise ValidationError('Please provide both password fields or leave them both empty.')

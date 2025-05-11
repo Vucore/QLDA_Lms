@@ -2,6 +2,10 @@
 
 {% block title %}EduLearn - Create Course{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/course-form.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row">

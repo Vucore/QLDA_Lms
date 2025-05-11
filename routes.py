@@ -300,7 +300,47 @@ def course_create():
         db.session.add(course)
         db.session.commit()
         
-        flash('Course created successfully!', 'success')
+        # Process schedule items
+        schedule_days = request.form.getlist('schedule_day[]')
+        schedule_start_times = request.form.getlist('schedule_start_time[]')
+        schedule_end_times = request.form.getlist('schedule_end_time[]')
+        schedule_locations = request.form.getlist('schedule_location[]')
+        
+        # Create schedule entries
+        for i in range(len(schedule_days)):
+            if schedule_days[i] and schedule_start_times[i] and schedule_end_times[i]:
+                # Convert day name to next occurrence of that day
+                day_name = schedule_days[i]
+                today = datetime.now().date()
+                day_idx = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 
+                          'Friday': 4, 'Saturday': 5, 'Sunday': 6}
+                
+                # Calculate days until next occurrence
+                days_ahead = day_idx[day_name] - today.weekday()
+                if days_ahead <= 0:  # Target day already happened this week
+                    days_ahead += 7
+                
+                next_day = today + timedelta(days=days_ahead)
+                
+                # Create time objects
+                start_time = datetime.strptime(schedule_start_times[i], '%H:%M').time()
+                end_time = datetime.strptime(schedule_end_times[i], '%H:%M').time()
+                
+                # Create the schedule
+                schedule = Schedule(
+                    date=next_day,
+                    start_time=start_time,
+                    end_time=end_time,
+                    topic=f"Weekly {day_name} class",
+                    course_id=course.id,
+                    location=schedule_locations[i] if schedule_locations[i] else "Online"
+                )
+                
+                db.session.add(schedule)
+        
+        db.session.commit()
+        
+        flash('Course created successfully with weekly schedule!', 'success')
         return redirect(url_for('course_detail', course_id=course.id))
     
     return render_template('courses/create.html', form=form, instructors=instructors)
