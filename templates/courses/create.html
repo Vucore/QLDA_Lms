@@ -48,7 +48,7 @@
                             <div class="form-text">Provide a detailed description of what students will learn in this course.</div>
                         </div>
                         
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="image_url" class="form-label">Course Image URL</label>
                             {{ form.image_url(class_="form-control", id="image_url", placeholder="Enter image URL") }}
                             {% if form.image_url.errors %}
@@ -59,6 +59,63 @@
                             </div>
                             {% endif %}
                             <div class="form-text">Add an image URL for your course thumbnail. Leave blank to use a default image.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="instructor_id" class="form-label">Assign Instructor <span class="text-danger">*</span></label>
+                            <select class="form-select" id="instructor_id" name="instructor_id" required>
+                                <option value="">-- Select Instructor --</option>
+                                {% for instructor in instructors %}
+                                <option value="{{ instructor.id }}">{{ instructor.full_name }} ({{ instructor.expertise or 'No specific expertise' }})</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select an instructor for this course.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="mb-3">Weekly Schedule</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Define the weekly schedule for this course. You can add more detailed schedules after creating the course.</p>
+                                    
+                                    <div id="schedule-items">
+                                        <div class="schedule-item mb-3 p-3 border rounded">
+                                            <div class="row g-2">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Day</label>
+                                                    <select class="form-select" name="schedule_day[]">
+                                                        <option value="Monday">Monday</option>
+                                                        <option value="Tuesday">Tuesday</option>
+                                                        <option value="Wednesday">Wednesday</option>
+                                                        <option value="Thursday">Thursday</option>
+                                                        <option value="Friday">Friday</option>
+                                                        <option value="Saturday">Saturday</option>
+                                                        <option value="Sunday">Sunday</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Start Time</label>
+                                                    <input type="time" class="form-control" name="schedule_start_time[]">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">End Time</label>
+                                                    <input type="time" class="form-control" name="schedule_end_time[]">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Location</label>
+                                                    <input type="text" class="form-control" name="schedule_location[]" placeholder="Optional">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="button" id="add-schedule" class="btn btn-outline-primary">
+                                        <i class="fas fa-plus me-2"></i>Add Another Time Slot
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="mb-3">

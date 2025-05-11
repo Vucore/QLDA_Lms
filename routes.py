@@ -270,33 +270,26 @@ def course_detail(course_id):
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 @login_required
-@role_required('instructor', 'admin')
+@role_required('admin')
 def course_create():
     form = CourseForm()
     
-    # Check if the current user is actually an instructor
-    if current_user.role == 'instructor' and not current_user.instructor_profile:
-        flash('Your instructor profile has not been completely set up. Please contact an administrator.', 'warning')
-        return redirect(url_for('courses'))
+    # Get all instructors for the selection dropdown
+    instructors = Instructor.query.all()
     
     if form.validate_on_submit():
-        instructor = None
-        if current_user.role == 'instructor':
-            instructor = current_user.instructor_profile
-        elif current_user.role == 'admin':
-            # TODO: implement instructor selection for admin
-            # For now, show a message that this feature is coming soon
-            flash('As admin, you need to assign an instructor for this course. This feature is not implemented yet.', 'warning')
-            return redirect(url_for('courses'))
-        else:
-            # This shouldn't happen due to the role_required decorator, but just in case
-            flash('You do not have permission to create courses.', 'danger')
-            return redirect(url_for('courses'))
+        # Get the selected instructor
+        instructor_id = request.form.get('instructor_id')
+        if not instructor_id:
+            flash('Please select an instructor for this course.', 'danger')
+            return render_template('courses/create.html', form=form, instructors=instructors)
         
+        instructor = Instructor.query.get(instructor_id)
         if not instructor:
-            flash('Cannot create course: No instructor profile found.', 'danger')
-            return redirect(url_for('courses'))
+            flash('Selected instructor not found.', 'danger')
+            return render_template('courses/create.html', form=form, instructors=instructors)
         
+        # Create the course
         course = Course(
             name=form.name.data,
             description=form.description.data,
@@ -310,7 +303,7 @@ def course_create():
         flash('Course created successfully!', 'success')
         return redirect(url_for('course_detail', course_id=course.id))
     
-    return render_template('courses/create.html', form=form)
+    return render_template('courses/create.html', form=form, instructors=instructors)
 
 @app.route('/courses/<int:course_id>/edit', methods=['GET', 'POST'])
 @login_required
