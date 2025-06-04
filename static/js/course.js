@@ -3,29 +3,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-  
-  // Course sections accordion
-  const lessonToggles = document.querySelectorAll('.lesson-toggle');
-  
-  lessonToggles.forEach(toggle => {
-    toggle.addEventListener('click', function() {
-      this.classList.toggle('active');
-      
-      const content = this.nextElementSibling;
-      if (content.style.maxHeight) {
-        content.style.maxHeight = null;
-      } else {
-        content.style.maxHeight = content.scrollHeight + "px";
-      }
-      
-      // Toggle icon
-      const icon = this.querySelector('i');
-      if (icon) {
-        icon.classList.toggle('fa-chevron-down');
-        icon.classList.toggle('fa-chevron-up');
-      }
-    });
-  });
+  // Đã loại bỏ code xử lý accordion vì đã chuyển sang dùng trang chi tiết bài giảng
   
   // Course tabs
   const courseTabs = document.querySelectorAll('.course-tab');

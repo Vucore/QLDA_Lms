@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField, DateField, TimeField, FloatField, FileField, BooleanField
+from flask_wtf.file import FileField, FileAllowed
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField, DateField, TimeField, FloatField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional
 from datetime import datetime, date
 from models import User
@@ -13,7 +14,7 @@ class LoginForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=4, max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
+    password = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
     full_name = StringField('Full Name', validators=[DataRequired(), Length(max=120)])
     # Role is now assigned as 'student' by default and can only be changed by admins
@@ -33,8 +34,22 @@ class RegistrationForm(FlaskForm):
 class CourseForm(FlaskForm):
     name = StringField('Course Name', validators=[DataRequired(), Length(max=120)])
     description = TextAreaField('Description', validators=[DataRequired()])
-    image_url = StringField('Image URL', validators=[Optional(), Length(max=255)])
+    course_image = FileField('Course Image', validators=[
+        Optional(),
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Images only!')
+    ])
     submit = SubmitField('Save Course')
+    
+    def validate_course_image(self, field):
+        if field.data:
+            filename = field.data.filename
+            if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                raise ValidationError('Please upload an image file (PNG, JPG)')
+            # Check file size
+            field.data.seek(0, 2)  # Seek to end of file
+            size = field.data.tell()  # Get size
+            if size > 2 * 1024 * 1024:  # 2MB limit
+                raise ValidationError('File size must be less than 2MB')
 
 class LessonForm(FlaskForm):
     title = StringField('Lesson Title', validators=[DataRequired(), Length(max=120)])
@@ -83,7 +98,7 @@ class ScheduleForm(FlaskForm):
 class UserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=4, max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[Optional(), Length(min=8)])
+    password = PasswordField('Password', validators=[Optional()])
     password2 = PasswordField('Confirm Password', validators=[Optional(), EqualTo('password')])
     full_name = StringField('Full Name', validators=[DataRequired(), Length(max=120)])
     role = SelectField('Role', choices=[('student', 'Student'), ('instructor', 'Instructor'), ('admin', 'Admin')], validators=[DataRequired()])

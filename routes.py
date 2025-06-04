@@ -1,3 +1,4 @@
+import os
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
@@ -8,6 +9,11 @@ from forms import (LoginForm, RegistrationForm, CourseForm, LessonForm, Assignme
                   SubmissionForm, GradeForm, ScheduleForm, UserForm)
 from utils import role_required
 import logging
+from werkzeug.utils import secure_filename
+
+# Configure file upload settings
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'courses')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 # Home page
 @app.route('/')
@@ -266,7 +272,40 @@ def course_detail(course_id):
                            lessons=lessons, 
                            assignments=assignments,
                            schedules=schedules,
-                           is_enrolled=is_enrolled)
+                           is_enrolled=is_enrolled,
+                           Course=Course,
+                           now=datetime.now())
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_course_image(form_image):
+    if not form_image:
+        return None
+        
+    if form_image and allowed_file(form_image.filename):
+        try:
+            # Create unique filename
+            filename = secure_filename(form_image.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+            new_filename = f"{timestamp}_{filename}"
+            
+            # Ensure upload directory exists
+            if not os.path.exists(UPLOAD_FOLDER):
+                os.makedirs(UPLOAD_FOLDER)
+            
+            # Save file
+            filepath = os.path.join(UPLOAD_FOLDER, new_filename)
+            form_image.save(filepath)
+            
+            # Return relative path for database
+            return f'uploads/courses/{new_filename}'
+        except Exception as e:
+            app.logger.error(f"Error saving course image: {str(e)}")
+            raise e
+    
+    return None
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 @login_required
@@ -278,104 +317,119 @@ def course_create():
     instructors = Instructor.query.all()
     
     if form.validate_on_submit():
-        # Get the selected instructor
-        instructor_id = request.form.get('instructor_id')
-        if not instructor_id:
-            flash('Please select an instructor for this course.', 'danger')
-            return render_template('courses/create.html', form=form, instructors=instructors)
-        
-        instructor = Instructor.query.get(instructor_id)
-        if not instructor:
-            flash('Selected instructor not found.', 'danger')
-            return render_template('courses/create.html', form=form, instructors=instructors)
-        
-        # Create the course
-        course = Course(
-            name=form.name.data,
-            description=form.description.data,
-            image_url=form.image_url.data or None,
-            instructor=instructor
-        )
-        
-        db.session.add(course)
-        db.session.commit()
-        
-        # Process schedule items
-        schedule_days = request.form.getlist('schedule_day[]')
-        schedule_start_times = request.form.getlist('schedule_start_time[]')
-        schedule_end_times = request.form.getlist('schedule_end_time[]')
-        schedule_locations = request.form.getlist('schedule_location[]')
-        
-        # Create schedule entries
-        for i in range(len(schedule_days)):
-            if schedule_days[i] and schedule_start_times[i] and schedule_end_times[i]:
-                # Convert day name to next occurrence of that day
-                day_name = schedule_days[i]
-                today = datetime.now().date()
-                day_idx = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 
-                          'Friday': 4, 'Saturday': 5, 'Sunday': 6}
-                
-                # Calculate days until next occurrence
-                days_ahead = day_idx[day_name] - today.weekday()
-                if days_ahead <= 0:  # Target day already happened this week
-                    days_ahead += 7
-                
-                next_day = today + timedelta(days=days_ahead)
-                
-                # Create time objects
-                start_time = datetime.strptime(schedule_start_times[i], '%H:%M').time()
-                end_time = datetime.strptime(schedule_end_times[i], '%H:%M').time()
-                
-                # Create the schedule
-                schedule = Schedule(
-                    date=next_day,
-                    start_time=start_time,
-                    end_time=end_time,
-                    topic=f"Weekly {day_name} class",
-                    course_id=course.id,
-                    location=schedule_locations[i] if schedule_locations[i] else "Online"
-                )
-                
-                db.session.add(schedule)
-        
-        db.session.commit()
-        
-        flash('Course created successfully with weekly schedule!', 'success')
-        return redirect(url_for('course_detail', course_id=course.id))
+        try:
+            # Get the selected instructor
+            instructor_id = request.form.get('instructor_id')
+            if not instructor_id:
+                flash('Please select an instructor for this course.', 'danger')
+                return render_template('courses/create.html', form=form, instructors=instructors)
+            
+            instructor = Instructor.query.get(instructor_id)
+            if not instructor:
+                flash('Selected instructor not found.', 'danger')
+                return render_template('courses/create.html', form=form, instructors=instructors)
+            
+            # Handle image upload
+            image_path = None
+            if 'course_image' in request.files:
+                file = request.files['course_image']
+                if file.filename:
+                    image_path = save_course_image(file)
+            
+            # Create the course
+            course = Course(
+                name=form.name.data,
+                description=form.description.data,
+                image_url=image_path,
+                instructor=instructor
+            )
+            
+            db.session.add(course)
+            db.session.commit()
+            
+            # Process schedule items
+            schedule_days = request.form.getlist('schedule_day[]')
+            schedule_start_times = request.form.getlist('schedule_start_time[]')
+            schedule_end_times = request.form.getlist('schedule_end_time[]')
+            schedule_locations = request.form.getlist('schedule_location[]')
+            
+            # Create schedule entries
+            for i in range(len(schedule_days)):
+                if schedule_days[i] and schedule_start_times[i] and schedule_end_times[i]:
+                    # Convert day name to next occurrence of that day
+                    day_name = schedule_days[i]
+                    today = datetime.now().date()
+                    day_idx = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 
+                              'Friday': 4, 'Saturday': 5, 'Sunday': 6}
+                    
+                    # Calculate days until next occurrence
+                    days_ahead = day_idx[day_name] - today.weekday()
+                    if days_ahead <= 0:  # Target day already happened this week
+                        days_ahead += 7
+                    
+                    next_day = today + timedelta(days=days_ahead)
+                    
+                    # Create time objects
+                    start_time = datetime.strptime(schedule_start_times[i], '%H:%M').time()
+                    end_time = datetime.strptime(schedule_end_times[i], '%H:%M').time()
+                    
+                    # Create the schedule
+                    schedule = Schedule(
+                        date=next_day,
+                        start_time=start_time,
+                        end_time=end_time,
+                        topic=f"Weekly {day_name} class",
+                        course_id=course.id,
+                        location=schedule_locations[i] if schedule_locations[i] else "Online"
+                    )
+                    
+                    db.session.add(schedule)
+            
+            db.session.commit()
+            
+            flash('Course created successfully with weekly schedule!', 'success')
+            return redirect(url_for('course_detail', course_id=course.id))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creating course: {str(e)}")
+            flash(f'Error creating course: {str(e)}', 'danger')
     
-    return render_template('courses/create.html', form=form, instructors=instructors)
+    return render_template('courses/create.html', form=form, instructors=instructors, Course=Course)
 
 @app.route('/courses/<int:course_id>/edit', methods=['GET', 'POST'])
 @login_required
 def course_edit(course_id):
     course = Course.query.get_or_404(course_id)
     
-    # Check permissions
-    if current_user.role == 'instructor' and course.instructor_id != current_user.instructor_profile.id:
+    # Check if user is instructor of this course or admin
+    if not current_user.is_admin() and (not current_user.is_instructor() or 
+        current_user.instructor_profile.id != course.instructor_id):
         flash('You do not have permission to edit this course.', 'danger')
-        return redirect(url_for('course_detail', course_id=course.id))
+        return redirect(url_for('course_detail', course_id=course_id))
     
-    if current_user.role == 'student':
-        flash('Students cannot edit courses.', 'danger')
-        return redirect(url_for('course_detail', course_id=course.id))
-    
-    form = CourseForm()
-    
-    if request.method == 'GET':
-        form.name.data = course.name
-        form.description.data = course.description
-        form.image_url.data = course.image_url
-    
+    form = CourseForm(obj=course)
     if form.validate_on_submit():
+        # Handle image upload if new file is provided
+        if 'course_image' in request.files:
+            file = request.files['course_image']
+            if file and file.filename:
+                # Delete old image if exists
+                if course.image_url:
+                    old_image_path = os.path.join(app.static_folder, course.image_url)
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                
+                # Save new image
+                image_path = save_course_image(file)
+                if image_path:
+                    course.image_url = image_path
+        
         course.name = form.name.data
         course.description = form.description.data
-        course.image_url = form.image_url.data or None
-        
         db.session.commit()
-        
         flash('Course updated successfully!', 'success')
         return redirect(url_for('course_detail', course_id=course.id))
-    
+        
     return render_template('courses/edit.html', form=form, course=course)
 
 @app.route('/courses/<int:course_id>/enroll', methods=['POST'])
@@ -433,7 +487,9 @@ def course_delete(course_id):
     # Redirect based on user role
     if current_user.role == 'instructor':
         return redirect(url_for('instructor_courses'))
-    else:  # admin
+    elif current_user.role == 'admin':
+        return redirect(url_for('admin_courses'))
+    else:
         return redirect(url_for('courses'))
 
 # Lesson routes
@@ -511,6 +567,45 @@ def lesson_edit(lesson_id):
     
     return render_template('lessons/edit.html', form=form, lesson=lesson, course=course)
 
+@app.route('/lessons/<int:lesson_id>')
+@login_required
+def lesson_detail(lesson_id):
+    lesson = Lesson.query.get_or_404(lesson_id)
+    course = lesson.course
+    
+    # Kiểm tra quyền truy cập
+    if current_user.role == 'student':
+        # Sinh viên phải đăng ký khóa học để xem bài giảng
+        if course not in current_user.student_profile.enrolled_courses:
+            flash('You must be enrolled in this course to view lessons.', 'danger')
+            return redirect(url_for('course_detail', course_id=course.id))
+    elif current_user.role == 'instructor' and course.instructor_id != current_user.instructor_profile.id:
+        # Giáo viên chỉ có thể xem bài giảng của khóa học do họ dạy
+        if not current_user.is_admin():
+            flash('You do not have permission to view this lesson.', 'danger')
+            return redirect(url_for('course_detail', course_id=course.id))
+    
+    # Lấy danh sách tất cả bài giảng trong khóa học
+    course_lessons = course.lessons.order_by(Lesson.order).all()
+    
+    # Tìm bài giảng trước và sau
+    prev_lesson = None
+    next_lesson = None
+    
+    for i, current_lesson in enumerate(course_lessons):
+        if current_lesson.id == lesson.id:
+            if i > 0:
+                prev_lesson = course_lessons[i-1]
+            if i < len(course_lessons) - 1:
+                next_lesson = course_lessons[i+1]
+            break
+    
+    return render_template('lessons/detail.html', 
+                           lesson=lesson, 
+                           course_lessons=course_lessons,
+                           prev_lesson=prev_lesson,
+                           next_lesson=next_lesson)
+
 # Assignment routes
 @app.route('/courses/<int:course_id>/assignments/create', methods=['GET', 'POST'])
 @login_required
@@ -569,7 +664,8 @@ def assignment_detail(assignment_id):
                            assignment=assignment, 
                            course=course,
                            submission=submission,
-                           submissions=submissions)
+                           submissions=submissions,
+                           now=datetime.now())
 
 @app.route('/assignments/<int:assignment_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -623,7 +719,7 @@ def submission_create(assignment_id):
     
     # Check if deadline has passed
     if assignment.deadline < datetime.utcnow():
-        flash('The deadline for this assignment has passed.', 'danger')
+        flash('The deadline for this assignment has passed.', 'danger', 'persistent')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
     # Check if student already has a submission
@@ -652,7 +748,10 @@ def submission_create(assignment_id):
         flash('Assignment submitted successfully!', 'success')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
-    return render_template('submissions/create.html', form=form, assignment=assignment)
+    return render_template('submissions/create.html', 
+                           form=form, 
+                           assignment=assignment,
+                           now=datetime.now())
 
 @app.route('/submissions/<int:submission_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -668,7 +767,7 @@ def submission_edit(submission_id):
     
     # Check if deadline has passed
     if assignment.deadline < datetime.utcnow():
-        flash('The deadline for this assignment has passed. You cannot edit your submission.', 'danger')
+        flash('The deadline for this assignment has passed. You cannot edit your submission.', 'danger', 'persistent')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
     form = SubmissionForm()
@@ -687,7 +786,11 @@ def submission_edit(submission_id):
         flash('Submission updated successfully!', 'success')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
-    return render_template('submissions/create.html', form=form, assignment=assignment, submission=submission)
+    return render_template('submissions/create.html', 
+                           form=form, 
+                           assignment=assignment, 
+                           submission=submission,
+                           now=datetime.now())
 
 @app.route('/submissions/<int:submission_id>/grade', methods=['GET', 'POST'])
 @login_required
@@ -805,6 +908,32 @@ def admin_users():
     users = User.query.all()
     return render_template('dashboard/admin.html', users=users, section='users')
 
+@app.route('/admin/courses')
+@login_required
+@role_required('admin')
+def admin_courses():
+    courses = Course.query.all()
+    instructors = Instructor.query.all()
+    
+    # Calculate some statistics for courses
+    total_courses = len(courses)
+    total_students_enrolled = sum(course.enrolled_students.count() for course in courses)
+    avg_students_per_course = total_students_enrolled / total_courses if total_courses > 0 else 0
+    courses_with_no_students = sum(1 for course in courses if course.enrolled_students.count() == 0)
+    
+    course_stats = {
+        'total_courses': total_courses,
+        'total_students_enrolled': total_students_enrolled,
+        'avg_students_per_course': round(avg_students_per_course, 1),
+        'courses_with_no_students': courses_with_no_students
+    }
+    
+    return render_template('dashboard/admin.html', 
+                          courses=courses, 
+                          instructors=instructors, 
+                          course_stats=course_stats,
+                          section='courses')
+
 @app.route('/admin/users/create', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
@@ -827,8 +956,13 @@ def admin_user_create():
             email=form.email.data,
             role=form.role.data
         )
-        # Set default password (user should change it)
-        user.set_password('changeme123')
+        
+        # Set password (either custom or default)
+        if form.password.data:
+            user.set_password(form.password.data)
+        else:
+            user.set_password('changeme123')
+            flash('User created with default password: changeme123', 'warning')
         
         db.session.add(user)
         db.session.flush()  # Needed to get user ID
@@ -839,14 +973,13 @@ def admin_user_create():
                 user=user,
                 full_name=form.full_name.data
             )
+            db.session.add(profile)
         elif form.role.data == 'instructor':
             profile = Instructor(
                 user=user,
                 full_name=form.full_name.data,
                 expertise=form.expertise.data
             )
-        
-        if form.role.data != 'admin':
             db.session.add(profile)
         
         db.session.commit()
@@ -878,6 +1011,10 @@ def admin_user_edit(user_id):
         # Update user data
         user.username = form.username.data
         user.email = form.email.data
+        
+        # Handle password change if provided
+        if form.password.data:
+            user.set_password(form.password.data)
         
         # Check if role changed
         if user.role != form.role.data:

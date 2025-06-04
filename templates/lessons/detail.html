@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - {{ lesson.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lesson-header {
+        background-color: #f8f9fa;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .lesson-content-container {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .lesson-navigation {
+        margin-top: 40px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lesson-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('courses') }}">Courses</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=lesson.course.id) }}">{{ lesson.course.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ lesson.title }}</li>
+            </ol>
+        </nav>
+        <h1 class="mb-3">{{ lesson.title }}</h1>
+        <div class="d-flex align-items-center">
+            <div class="me-4">
+                <span class="text-muted">Course:</span>
+                <a href="{{ url_for('course_detail', course_id=lesson.course.id) }}">{{ lesson.course.name }}</a>
+            </div>
+            <div>
+                <span class="text-muted">Lesson:</span>
+                <span>{{ lesson.order }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="lesson-content-container">
+                <div class="lesson-content">
+                    {{ lesson.content|safe }}
+                    
+                    {% if lesson.file_url %}
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h5><i class="fas fa-file-download me-2"></i>Lesson Resources</h5>
+                        <a href="{{ lesson.file_url }}" class="btn btn-primary mt-2" target="_blank">
+                            Download Resources
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="lesson-navigation">
+                    <div class="d-flex justify-content-between">
+                        {% if prev_lesson %}
+                        <a href="{{ url_for('lesson_detail', lesson_id=prev_lesson.id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Previous Lesson
+                        </a>
+                        {% else %}
+                        <div></div>
+                        {% endif %}
+                        
+                        {% if next_lesson %}
+                        <a href="{{ url_for('lesson_detail', lesson_id=next_lesson.id) }}" class="btn btn-primary">
+                            Next Lesson<i class="fas fa-arrow-right ms-2"></i>
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('course_detail', course_id=lesson.course.id) }}" class="btn btn-success">
+                            Complete<i class="fas fa-check ms-2"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 mt-4 mt-lg-0">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Course Content</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for course_lesson in course_lessons %}
+                        <a href="{{ url_for('lesson_detail', lesson_id=course_lesson.id) }}" class="list-group-item list-group-item-action {% if course_lesson.id == lesson.id %}active{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <span class="me-2">{{ loop.index }}.</span>
+                                    <span>{{ course_lesson.title }}</span>
+                                </div>
+                                {% if course_lesson.id == lesson.id %}
+                                <i class="fas fa-arrow-right"></i>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if current_user.is_authenticated and current_user.is_instructor() and current_user.instructor_profile.id == lesson.course.instructor_id or current_user.is_admin() %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Instructor Actions</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('lesson_edit', lesson_id=lesson.id) }}" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-edit me-2"></i>Edit Lesson
+                    </a>
+                    <a href="{{ url_for('lesson_create', course_id=lesson.course.id) }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-plus me-2"></i>Add New Lesson
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

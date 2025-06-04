@@ -54,10 +54,9 @@
                 </div>
             </div>
             
-            {% if not admin_mode %}
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="password" class="form-label">Password</label>
+                    <label for="password" class="form-label">Password {% if admin_mode %}(Leave blank to keep unchanged){% endif %}</label>
                     <div class="input-group">
                         {{ form.password(class_="form-control", id="password", placeholder="Create a password") }}
                         <button class="btn btn-outline-secondary password-toggle" type="button">
@@ -90,7 +89,6 @@
                     {% endif %}
                 </div>
             </div>
-            {% endif %}
             
             <div class="mb-3">
                 <label for="full_name" class="form-label">Full Name</label>
@@ -104,9 +102,23 @@
                 {% endif %}
             </div>
             
+            {% if admin_mode %}
             <div class="mb-3">
-                <label for="expertise" class="form-label">Area of Interest (Optional)</label>
-                {{ form.expertise(class_="form-control", id="expertise", placeholder="Your areas of interest") }}
+                <label for="role" class="form-label">User Role</label>
+                {{ form.role(class_="form-select", id="role") }}
+                {% if form.role.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.role.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="expertise" class="form-label">{% if admin_mode %}Expertise (for instructors){% else %}Area of Interest (Optional){% endif %}</label>
+                {{ form.expertise(class_="form-control", id="expertise", placeholder=(admin_mode and 'Instructor expertise areas' or 'Your areas of interest')) }}
                 {% if form.expertise.errors %}
                 <div class="invalid-feedback d-block">
                     {% for error in form.expertise.errors %}
@@ -127,7 +139,7 @@
             {% endif %}
             
             <div class="d-grid">
-                {{ form.submit(class_="btn btn-primary btn-lg", value="Register" if not admin_mode else "Create User") }}
+                {{ form.submit(class_="btn btn-primary btn-lg", value="Register" if not admin_mode else "Save changes") }}
             </div>
         </form>
         

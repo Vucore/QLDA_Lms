@@ -7,17 +7,17 @@ def create_test_users():
     """Create test users for different roles"""
     with app.app_context():
         # Check if users already exist
-        if User.query.filter_by(username='student1').first():
-            print("Test users already exist. No changes made.")
-            return
+        # if User.query.filter_by(username='student1').first():
+        #     print("Test users already exist. No changes made.")
+        #     return
         
         # Create student user
         student_user = User(
-            username='student1',
-            email='student1@example.com',
+            username='student',
+            email='student@example.com',
             role='student'
         )
-        student_user.set_password('password123')
+        student_user.set_password('a123')
         db.session.add(student_user)
         db.session.flush()  # To get the id
         
@@ -30,11 +30,11 @@ def create_test_users():
         
         # Create instructor user
         instructor_user = User(
-            username='instructor1',
-            email='instructor1@example.com',
+            username='instructor',
+            email='instructor@example.com',
             role='instructor'
         )
-        instructor_user.set_password('password123')
+        instructor_user.set_password('a123')
         db.session.add(instructor_user)
         db.session.flush()  # To get the id
         
@@ -49,19 +49,19 @@ def create_test_users():
         # Create admin user
         admin_user = User(
             username='admin1',
-            email='admin1@example.com',
+            email='admin@example.com',
             role='admin'
         )
-        admin_user.set_password('password123')
+        admin_user.set_password('a123')
         db.session.add(admin_user)
         
         # Commit all changes
         db.session.commit()
         
         print("Created test users:")
-        print("Student: username=student1, password=password123")
-        print("Instructor: username=instructor1, password=password123")
-        print("Admin: username=admin1, password=password123")
+        print("Student: username=student, password=a123")
+        print("Instructor: username=instructor, password=a123")
+        print("Admin: username=admin, password=a123")
 
 if __name__ == '__main__':
     create_test_users()

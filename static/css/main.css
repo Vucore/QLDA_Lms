@@ -21,6 +21,10 @@ body {
   background-color: var(--light-color);
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
 }
 
 a {
@@ -56,6 +60,32 @@ a:hover {
 .navbar {
   background-color: white;
   box-shadow: 0 2px 10px var(--shadow-color);
+  position: relative;
+  z-index: 1030;
+}
+
+.content-wrapper {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  padding-bottom: 2rem;
+}
+
+main {
+  flex: 1 0 auto;
+  width: 100%;
+  padding: 2rem 0;
+}
+
+.container {
+  width: 100%;
+  padding-right: var(--bs-gutter-x, 0.75rem);
+  padding-left: var(--bs-gutter-x, 0.75rem);
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 1320px;
 }
 
 .navbar-brand {
@@ -69,6 +99,11 @@ a:hover {
   box-shadow: 0 4px 15px var(--shadow-color);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: none;
+  background: #fff;
+  position: relative;
+  isolation: isolate;
+  margin-bottom: 1.5rem;
+  height: fit-content;
 }
 
 .card:hover {
@@ -197,6 +232,23 @@ a:hover {
 .alert {
   border-radius: 8px;
   box-shadow: 0 4px 15px var(--shadow-color);
+  transition: opacity 0.15s linear;
+}
+
+.alert.hide {
+  opacity: 0;
+}
+
+.alert.show {
+  opacity: 1;
+}
+
+.alert .btn-close {
+  transition: opacity 0.15s linear;
+}
+
+.alert .btn-close:hover {
+  opacity: 0.8;
 }
 
 /* Category icons */
@@ -264,26 +316,66 @@ a:hover {
 }
 
 /* Responsive adjustments */
+@media (max-width: 1200px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+@media (max-width: 992px) {
+  .container {
+    max-width: 720px;
+  }
+
+  main {
+    padding: 1.5rem 0;
+  }
+}
+
 @media (max-width: 768px) {
+  .container {
+    max-width: 540px;
+  }
+
   .hero-section {
     padding: 40px 0;
   }
-  
+
   .hero-content h1 {
     font-size: 2rem;
   }
-  
+
+  main {
+    padding: 1rem 0;
+  }
+
+  .content-wrapper {
+    padding-bottom: 1rem;
+  }
+
   .social-login {
     flex-direction: column;
   }
-  
+
   .social-login .btn {
     margin: 5px 0;
   }
-  
+
   .cta-section .btn {
     display: block;
     width: 100%;
     margin: 10px 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .container {
+    max-width: none;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  main {
+    padding: 0.5rem 0;
   }
 }

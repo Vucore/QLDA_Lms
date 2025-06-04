@@ -14,13 +14,14 @@
             <div class="sidebar">
                 <div class="sidebar-user">
                     <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg" class="mb-3">
-                        <circle cx="40" cy="40" r="40" fill="#f0f0f0"/>
-                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30" fill="#2a41e8">A</text>
+                        <circle cx="40" cy="40" r="40" fill="#f0f0f0" />
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30"
+                            fill="#2a41e8">A</text>
                     </svg>
                     <h5>Admin</h5>
                     <p>Administrator</p>
                 </div>
-                
+
                 <ul class="sidebar-menu">
                     <li>
                         <a href="{{ url_for('admin_dashboard') }}" class="active">
@@ -33,7 +34,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#">
+                        <a href="{{ url_for('admin_courses') }}">
                             <i class="fas fa-book"></i> Courses
                         </a>
                     </li>
@@ -55,10 +56,181 @@
                 </ul>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="col-lg-9">
-            {% if section == 'users' %}
+            {% if section == 'courses' %}
+            <!-- Courses Management Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Courses Management</h2>
+                <div>
+                    <a href="{{ url_for('course_create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-2"></i>Add Course
+                    </a>
+                </div>
+            </div>
+
+            <!-- Course Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>{{ course_stats.total_courses }}</h2>
+                        <p>Total Courses</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>{{ course_stats.total_students_enrolled }}</h2>
+                        <p>Total Enrollments</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>{{ course_stats.avg_students_per_course }}</h2>
+                        <p>Avg Students/Course</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card">
+                        <h2>{{ course_stats.courses_with_no_students }}</h2>
+                        <p>Courses with No Students</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div class="d-flex">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Search courses...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <select class="form-select">
+                                <option value="all" selected>All Instructors</option>
+                                {% for instructor in instructors %}
+                                <option value="{{ instructor.id }}">{{ instructor.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Course Name</th>
+                                    <th>Instructor</th>
+                                    <th>Students</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in courses %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if course.image_url %}
+                                            <div class="me-2" style="width: 40px; height: 40px;">
+                                                <img src="{{ url_for('static', filename=course.image_url) }}"
+                                                    alt="{{ course.name }}" class="rounded"
+                                                    style="width: 100%; height: 100%; object-fit: cover;">
+                                            </div>
+                                            {% else %}
+                                            <div class="bg-light me-2 rounded d-flex align-items-center justify-content-center"
+                                                style="width: 40px; height: 40px;">
+                                                <i class="fas fa-book text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <span>{{ course.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ course.instructor.full_name }}</td>
+                                    <td>{{ course.enrolled_students.count() }}</td>
+                                    <td>{{ course.created_at.strftime('%b %d, %Y') }}</td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button" id="dropdownMenuButton{{ course.id }}"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu"
+                                                aria-labelledby="dropdownMenuButton{{ course.id }}">
+                                                <li><a class="dropdown-item"
+                                                        href="{{ url_for('course_detail', course_id=course.id) }}"><i
+                                                            class="fas fa-eye me-2"></i>View</a></li>
+                                                <li><a class="dropdown-item"
+                                                        href="{{ url_for('course_edit', course_id=course.id) }}"><i
+                                                            class="fas fa-edit me-2"></i>Edit</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal"
+                                                        data-bs-target="#deleteCourseModal{{ course.id }}"><i
+                                                            class="fas fa-trash-alt me-2"></i>Delete</a></li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Delete Course Modal -->
+                                        <div class="modal fade" id="deleteCourseModal{{ course.id }}" tabindex="-1"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Delete Course</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>Are you sure you want to delete <strong>{{ course.name
+                                                                }}</strong>?</p>
+                                                        <p class="text-danger">This action cannot be undone. All course
+                                                            data, including lessons, assignments, and submissions will
+                                                            be permanently removed.</p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary"
+                                                            data-bs-dismiss="modal">Cancel</button>
+                                                        <form
+                                                            action="{{ url_for('course_delete', course_id=course.id) }}"
+                                                            method="POST">
+                                                            <button type="submit" class="btn btn-danger">Delete
+                                                                Course</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center mt-4">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            {% elif section == 'users' %}
             <!-- Users Management Section -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Users Management</h2>
@@ -68,7 +240,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-3">
@@ -89,7 +261,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -107,82 +279,111 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg" class="me-2 rounded-circle">
-                                                <circle cx="20" cy="20" r="20" fill="#f0f0f0"/>
-                                                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="15" fill="#2a41e8">
+                                            <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"
+                                                class="me-2 rounded-circle">
+                                                <circle cx="20" cy="20" r="20" fill="#f0f0f0" />
+                                                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+                                                    font-size="15" fill="#2a41e8">
                                                     {% if user.is_student() and user.student_profile %}
-                                                        {{ user.student_profile.full_name[:1] }}
+                                                    {{ user.student_profile.full_name[:1] }}
                                                     {% elif user.is_instructor() and user.instructor_profile %}
-                                                        {{ user.instructor_profile.full_name[:1] }}
+                                                    {{ user.instructor_profile.full_name[:1] }}
                                                     {% else %}
-                                                        {{ user.username[:1] }}
+                                                    {{ user.username[:1] }}
                                                     {% endif %}
                                                 </text>
                                             </svg>
                                             {% if user.is_student() and user.student_profile %}
-                                                {{ user.student_profile.full_name }}
+                                            {{ user.student_profile.full_name }}
                                             {% elif user.is_instructor() and user.instructor_profile %}
-                                                {{ user.instructor_profile.full_name }}
+                                            {{ user.instructor_profile.full_name }}
                                             {% else %}
-                                                {{ user.username }}
+                                            {{ user.username }}
                                             {% endif %}
                                         </div>
                                     </td>
                                     <td>{{ user.email }}</td>
-                                    <td><span class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'instructor' %}bg-success{% else %}bg-primary{% endif %}">{{ user.role|capitalize }}</span></td>
+                                    <td><span
+                                            class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'instructor' %}bg-success{% else %}bg-primary{% endif %}">{{
+                                            user.role|capitalize }}</span></td>
                                     <td><span class="badge bg-success">Active</span></td>
                                     <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
                                     <td>
                                         <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ user.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button" id="dropdownMenuButton{{ user.id }}"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
                                                 Actions
                                             </button>
                                             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ user.id }}">
-                                                <li><a class="dropdown-item" href="{{ url_for('admin_user_edit', user_id=user.id) }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#resetPasswordModal{{ user.id }}"><i class="fas fa-key me-2"></i>Reset Password</a></li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}"><i class="fas fa-trash-alt me-2"></i>Delete</a></li>
+                                                <li><a class="dropdown-item"
+                                                        href="{{ url_for('admin_user_edit', user_id=user.id) }}"><i
+                                                            class="fas fa-edit me-2"></i>Edit</a></li>
+                                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                                        data-bs-target="#resetPasswordModal{{ user.id }}"><i
+                                                            class="fas fa-key me-2"></i>Reset Password</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal"
+                                                        data-bs-target="#deleteUserModal{{ user.id }}"><i
+                                                            class="fas fa-trash-alt me-2"></i>Delete</a></li>
                                             </ul>
                                         </div>
-                                        
+
                                         <!-- Reset Password Modal -->
-                                        <div class="modal fade" id="resetPasswordModal{{ user.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal fade" id="resetPasswordModal{{ user.id }}" tabindex="-1"
+                                            aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
                                                         <h5 class="modal-title">Reset Password</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body">
-                                                        <p>Are you sure you want to reset the password for <strong>{{ user.username }}</strong>?</p>
+                                                        <p>Are you sure you want to reset the password for <strong>{{
+                                                                user.username }}</strong>?</p>
                                                         <p>The password will be reset to <code>changeme123</code>.</p>
                                                     </div>
                                                     <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <form action="{{ url_for('admin_user_reset_password', user_id=user.id) }}" method="POST">
-                                                            <button type="submit" class="btn btn-warning">Reset Password</button>
+                                                        <button type="button" class="btn btn-secondary"
+                                                            data-bs-dismiss="modal">Cancel</button>
+                                                        <form
+                                                            action="{{ url_for('admin_user_reset_password', user_id=user.id) }}"
+                                                            method="POST">
+                                                            <button type="submit" class="btn btn-warning">Reset
+                                                                Password</button>
                                                         </form>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <!-- Delete User Modal -->
-                                        <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1"
+                                            aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
                                                         <h5 class="modal-title">Delete User</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body">
-                                                        <p>Are you sure you want to delete <strong>{{ user.username }}</strong>?</p>
-                                                        <p class="text-danger">This action cannot be undone. All user data will be permanently removed.</p>
+                                                        <p>Are you sure you want to delete <strong>{{ user.username
+                                                                }}</strong>?</p>
+                                                        <p class="text-danger">This action cannot be undone. All user
+                                                            data will be permanently removed.</p>
                                                     </div>
                                                     <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <form action="{{ url_for('admin_user_delete', user_id=user.id) }}" method="POST">
-                                                            <button type="submit" class="btn btn-danger">Delete User</button>
+                                                        <button type="button" class="btn btn-secondary"
+                                                            data-bs-dismiss="modal">Cancel</button>
+                                                        <form
+                                                            action="{{ url_for('admin_user_delete', user_id=user.id) }}"
+                                                            method="POST">
+                                                            <button type="submit" class="btn btn-danger">Delete
+                                                                User</button>
                                                         </form>
                                                     </div>
                                                 </div>
@@ -194,7 +395,7 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <nav aria-label="Page navigation">
                         <ul class="pagination justify-content-center mt-4">
                             <li class="page-item disabled">
@@ -210,13 +411,14 @@
                     </nav>
                 </div>
             </div>
-            
+
             {% else %}
             <!-- Dashboard Overview -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Admin Dashboard</h2>
                 <div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="dropdownMenuButton"
+                        data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-plus me-2"></i>Create New
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
@@ -226,7 +428,7 @@
                     </ul>
                 </div>
             </div>
-            
+
             <!-- Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-3 col-sm-6">
@@ -254,14 +456,14 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Recent Users -->
             <div class="dashboard-card mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4>Recent Users</h4>
                     <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary">View All</a>
                 </div>
-                
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -278,10 +480,13 @@
                             <tr>
                                 <td>{{ user.username }}</td>
                                 <td>{{ user.email }}</td>
-                                <td><span class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'instructor' %}bg-success{% else %}bg-primary{% endif %}">{{ user.role|capitalize }}</span></td>
+                                <td><span
+                                        class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'instructor' %}bg-success{% else %}bg-primary{% endif %}">{{
+                                        user.role|capitalize }}</span></td>
                                 <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
                                 <td>
-                                    <a href="{{ url_for('admin_user_edit', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a href="{{ url_for('admin_user_edit', user_id=user.id) }}"
+                                        class="btn btn-sm btn-outline-primary">Edit</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -289,14 +494,14 @@
                     </table>
                 </div>
             </div>
-            
+
             <!-- Course Overview -->
             <div class="dashboard-card mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4>Course Overview</h4>
-                    <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+                    <a href="{{ url_for('admin_courses') }}" class="btn btn-sm btn-outline-primary">View All</a>
                 </div>
-                
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -316,7 +521,8 @@
                                 <td>{{ course.enrolled_students.count() }}</td>
                                 <td>{{ course.created_at.strftime('%b %d, %Y') }}</td>
                                 <td>
-                                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('course_detail', course_id=course.id) }}"
+                                        class="btn btn-sm btn-outline-primary">View</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -324,15 +530,15 @@
                     </table>
                 </div>
             </div>
-            
+
             <!-- System Status -->
             <div class="dashboard-card">
                 <h4>System Status</h4>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <h6 class="text-muted mb-3">Server Resources</h6>
-                        
+
                         <div class="mb-3">
                             <div class="d-flex justify-content-between mb-1">
                                 <span>CPU Usage</span>
@@ -342,7 +548,7 @@
                                 <div class="progress-bar bg-success" style="width: 25%"></div>
                             </div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <div class="d-flex justify-content-between mb-1">
                                 <span>Memory Usage</span>
@@ -352,7 +558,7 @@
                                 <div class="progress-bar bg-primary" style="width: 45%"></div>
                             </div>
                         </div>
-                        
+
                         <div>
                             <div class="d-flex justify-content-between mb-1">
                                 <span>Disk Usage</span>
@@ -363,10 +569,10 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <h6 class="text-muted mb-3">Recent Activity</h6>
-                        
+
                         <div class="list-group list-group-flush">
                             <div class="list-group-item px-0">
                                 <div class="d-flex justify-content-between">
