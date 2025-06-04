@@ -217,12 +217,11 @@
                         </div>
                         <p class="ms-4 mb-0">{{ course.instructor.full_name }}</p>
                     </div>
-                    <div>
-                        <div class="d-flex align-items-center mb-2">
+                    <div>                        <div class="d-flex align-items-center mb-2">
                             <i class="fas fa-file-alt me-2 text-primary"></i>
                             <h6 class="mb-0">Submissions</h6>
                         </div>
-                        <p class="ms-4 mb-0">{{ submissions|length if submissions else 0 }} / {{ course.enrolled_students.count() }}</p>
+                        <p class="ms-4 mb-0">{{ submissions|length if submissions else 0 }} / {{ course.enrollments|selectattr('status', 'equalto', 'approved')|list|length }}</p>
                     </div>
                 </div>
             </div>

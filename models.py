@@ -4,12 +4,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from extensions import db
 
-# Association table for many-to-many relationship between students and courses
-enrollments = db.Table('enrollments',
-    db.Column('student_id', db.Integer, db.ForeignKey('student.id'), primary_key=True),
-    db.Column('course_id', db.Integer, db.ForeignKey('course.id'), primary_key=True),
-    db.Column('enrollment_date', db.DateTime, default=datetime.utcnow)
-)
+# Bảng trung gian mới cho phép lưu trạng thái duyệt
+class Enrollment(db.Model):
+    __tablename__ = 'enrollment'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    enrolled_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'approved', 'rejected'
+    approved_at = db.Column(db.DateTime, nullable=True)
+
+    student = db.relationship('Student', back_populates='enrollments')
+    course = db.relationship('Course', back_populates='enrollments')
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,7 +50,7 @@ class Student(db.Model):
     full_name = db.Column(db.String(120), nullable=False)
     
     # Relationships
-    enrolled_courses = db.relationship('Course', secondary=enrollments, backref=db.backref('enrolled_students', lazy='dynamic'))
+    enrollments = db.relationship('Enrollment', back_populates='student', cascade='all, delete-orphan')
     submissions = db.relationship('Submission', backref='student', lazy='dynamic')
 
 class Instructor(db.Model):
@@ -65,6 +71,7 @@ class Course(db.Model):
     image_url = db.Column(db.String(255))
     
     # Relationships
+    enrollments = db.relationship('Enrollment', back_populates='course', cascade='all, delete-orphan')
     lessons = db.relationship('Lesson', backref='course', lazy='dynamic', cascade='all, delete-orphan')
     assignments = db.relationship('Assignment', backref='course', lazy='dynamic', cascade='all, delete-orphan')
     schedules = db.relationship('Schedule', backref='course', lazy='dynamic', cascade='all, delete-orphan')
