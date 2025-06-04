@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Student Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="container dashboard-container">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <div class="sidebar">
+                    <div class="sidebar-user">
+                        <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg" class="mb-3">
+                            <circle cx="40" cy="40" r="40" fill="#f0f0f0" />
+                            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30"
+                                fill="#2a41e8">
+                                {{ student.full_name[:1] }}
+                            </text>
+                        </svg>
+                        <h5>{{ student.full_name }}</h5>
+                        <p>Student</p>
+                    </div>
+
+                    <ul class="sidebar-menu">
+                        <li>
+                            <a href="{{ url_for('student_dashboard') }}" class="active">
+                                <i class="fas fa-th-large"></i> Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('student_courses') }}">
+                                <i class="fas fa-book"></i> My Courses
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <i class="fas fa-calendar-alt"></i> Schedule
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <i class="fas fa-tasks"></i> Assignments
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <i class="fas fa-chart-line"></i> Progress
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#">
+                                <i class="fas fa-certificate"></i> Certificates
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('profile') }}">
+                                <i class="fas fa-user-cog"></i> Settings
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Dashboard</h2>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="stats-card">
+                            <h2>{{ enrolled_courses|length }}</h2>
+                            <p>Courses in Progress</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="stats-card">
+                            <h2>12</h2>
+                            <p>Completed Courses</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="stats-card">
+                            <h2>156</h2>
+                            <p>Hours Learned</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="stats-card">
+                            <h2>5</h2>
+                            <p>Certificates</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Continue Learning Section -->
+                <div class="dashboard-card mb-4">
+                    <h4>Continue Learning</h4>
+                    <div class="row g-4">
+                        {% for course in enrolled_courses[:2] %}
+                        <div class="col-md-6">
+                            <div class="course-progress">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5>{{ course.name }}</h5>
+                                    <span class="badge bg-primary">25% Complete</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-primary" style="width: 25%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Lesson 2 of 8</span>
+                                    <a href="{{ url_for('course_detail', course_id=course.id) }}"
+                                        class="btn btn-sm btn-primary">Continue</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-book-open fa-3x text-muted"></i>
+                            </div>
+                            <h5 class="text-muted">You haven't enrolled in any courses yet</h5>
+                            <p>Explore our course catalog and start your learning journey today.</p>
+                            <a href="{{ url_for('courses') }}" class="btn btn-primary mt-2">Explore Courses</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Upcoming Assignments -->
+                <div class="dashboard-card mb-4">
+                    <h4>Upcoming Assignments</h4>
+
+                    {% if upcoming_assignments %}
+                    {% for assignment in upcoming_assignments %}
+                    <div class="assignment-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6>{{ assignment.title }}</h6>
+                                <p class="text-muted mb-0">{{ assignment.course.name }}</p>
+                            </div>
+                            <div class="text-end">
+                                <div class="deadline">Due: {{ assignment.deadline.strftime('%b %d, %Y') }}</div>
+                                <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}"
+                                    class="btn btn-sm btn-outline-primary">View</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="text-muted">No upcoming assignments</h5>
+                        <p>You're all caught up! Check back later for new assignments.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Learning Goals -->
+                <div class="dashboard-card mb-4">
+                    <h4>Learning Goals</h4>
+
+                    <div class="learning-goals">
+                        <div class="goal-item">
+                            <div class="goal-title">
+                                <h6>Web Development</h6>
+                                <span>75%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar goal-progress" role="progressbar" data-progress="75"></div>
+                            </div>
+                        </div>
+
+                        <div class="goal-item">
+                            <div class="goal-title">
+                                <h6>UX/UI Design</h6>
+                                <span>45%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar goal-progress" role="progressbar" data-progress="45"></div>
+                            </div>
+                        </div>
+
+                        <div class="goal-item">
+                            <div class="goal-title">
+                                <h6>JavaScript</h6>
+                                <span>60%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar goal-progress" role="progressbar" data-progress="60"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus me-2"></i>Add New Goal
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upcoming Live Classes -->
+                <div class="dashboard-card">
+                    <h4>Upcoming Live Classes</h4>
+
+                    {% if upcoming_schedules %}
+                    {% for schedule in upcoming_schedules %}
+                    <div class="event-item">
+                        <div class="event-date">
+                            <span class="day">{{ schedule.date.strftime('%d') }}</span>
+                            <span class="month">{{ schedule.date.strftime('%b') }}</span>
+                        </div>
+                        <div class="event-info">
+                            <h6>{{ schedule.topic }}</h6>
+                            <p class="mb-1">{{ schedule.course.name }}</p>
+                            <p class="mb-0">
+                                <i class="fas fa-clock me-1"></i>{{ schedule.start_time.strftime('%I:%M %p') }} - {{
+                                schedule.end_time.strftime('%I:%M %p') }}
+                                {% if schedule.location %}
+                                <i class="fas fa-map-marker-alt ms-3 me-1"></i>{{ schedule.location }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="ms-auto align-self-center">
+                            <button class="btn btn-sm btn-primary">Join Now</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No upcoming live classes</h5>
+                        <p>Check back later for scheduled live sessions.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chart-config.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize activity chart
+        const activityData = {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
+            values: [5, 8, 6, 9, 12, 7]
+        };
+
+        if (document.getElementById('activity-chart')) {
+            createActivityChart('activity-chart', activityData);
+        }
+    });
+</script>
+{% endblock %}

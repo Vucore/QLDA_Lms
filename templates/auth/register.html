@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Register{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="auth-container" style="max-width: 550px;">
+        <div class="auth-header">
+            <h2>{% if admin_mode %}Create User{% else %}Create Account{% endif %}</h2>
+            <p class="text-muted">Join our learning community</p>
+        </div>
+        
+        {% if not admin_mode %}
+        <div class="social-login">
+            <button type="button" class="btn btn-outline-dark">
+                <i class="fab fa-google me-2"></i>Continue with Google
+            </button>
+            <button type="button" class="btn btn-outline-dark">
+                <i class="fab fa-microsoft me-2"></i>Continue with Microsoft
+            </button>
+        </div>
+        
+        <div class="divider-text">
+            <span>Or register with email</span>
+        </div>
+        {% endif %}
+        
+        <form method="POST" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    {{ form.username(class_="form-control", id="username", placeholder="Choose a username") }}
+                    {% if form.username.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.username.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    {{ form.email(class_="form-control", id="email", placeholder="Your email address") }}
+                    {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.email.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">Password {% if admin_mode %}(Leave blank to keep unchanged){% endif %}</label>
+                    <div class="input-group">
+                        {{ form.password(class_="form-control", id="password", placeholder="Create a password") }}
+                        <button class="btn btn-outline-secondary password-toggle" type="button">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.password.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="password2" class="form-label">Confirm Password</label>
+                    <div class="input-group">
+                        {{ form.password2(class_="form-control", id="password2", placeholder="Confirm your password") }}
+                        <button class="btn btn-outline-secondary password-toggle" type="button">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                    </div>
+                    {% if form.password2.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.password2.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="full_name" class="form-label">Full Name</label>
+                {{ form.full_name(class_="form-control", id="full_name", placeholder="Your full name") }}
+                {% if form.full_name.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.full_name.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if admin_mode %}
+            <div class="mb-3">
+                <label for="role" class="form-label">User Role</label>
+                {{ form.role(class_="form-select", id="role") }}
+                {% if form.role.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.role.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="expertise" class="form-label">{% if admin_mode %}Expertise (for instructors){% else %}Area of Interest (Optional){% endif %}</label>
+                {{ form.expertise(class_="form-control", id="expertise", placeholder=(admin_mode and 'Instructor expertise areas' or 'Your areas of interest')) }}
+                {% if form.expertise.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.expertise.errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if not admin_mode %}
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="terms" required>
+                <label class="form-check-label" for="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+                <div class="invalid-feedback">
+                    You must agree before submitting.
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="d-grid">
+                {{ form.submit(class_="btn btn-primary btn-lg", value="Register" if not admin_mode else "Save changes") }}
+            </div>
+        </form>
+        
+        {% if not admin_mode %}
+        <div class="text-center mt-4">
+            <p>Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+        </div>
+        {% else %}
+        <div class="text-center mt-4">
+            <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">Back to Users</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Password visibility toggle
+        const toggleBtns = document.querySelectorAll('.password-toggle');
+        toggleBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const input = this.parentNode.querySelector('input');
+                const icon = this.querySelector('i');
+                
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
+        
+        // Form validation
+        const form = document.querySelector('.needs-validation');
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

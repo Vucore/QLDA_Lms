@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Submit Assignment{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('courses') }}">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=assignment.course.id) }}">{{ assignment.course.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}">{{ assignment.title }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% if submission %}Edit{% else %}Submit{% endif %} Assignment</li>
+                </ol>
+            </nav>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0">{% if submission %}Edit{% else %}Submit{% endif %} Assignment</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert {% if assignment.deadline < now %}alert-danger{% else %}alert-info{% endif %} mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas {% if assignment.deadline < now %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} fa-2x"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading mb-1">{% if assignment.deadline < now %}Deadline Passed{% else %}Assignment Information{% endif %}</h5>
+                                <p class="mb-0">
+                                    {% if assignment.deadline < now %}
+                                    The deadline for this assignment was {{ assignment.deadline.strftime('%b %d, %Y at %I:%M %p') }}.
+                                    {% else %}
+                                    This assignment is due on {{ assignment.deadline.strftime('%b %d, %Y at %I:%M %p') }}.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Assignment: {{ assignment.title }}</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                {{ assignment.description|safe }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form method="POST" class="needs-validation" id="submission-form" enctype="multipart/form-data" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-4">
+                            <label for="content" class="form-label">Submission Content</label>
+                            {{ form.content(class_="form-control", id="content", rows=8, placeholder="Enter your submission here...") }}
+                            {% if form.content.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.content.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">You can use text formatting to organize your submission.</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="file_url" class="form-label">File URL</label>
+                            {{ form.file_url(class_="form-control", id="file_url", placeholder="Enter URL to your submission file") }}
+                            {% if form.file_url.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.file_url.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Provide a URL to your submission file (e.g., Google Drive, Dropbox, GitHub).</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                            {% if assignment.deadline < now %}
+                                {{ form.submit(class_="btn btn-warning", value="Submit Late") }}
+                            {% else %}
+                                {{ form.submit(class_="btn btn-primary") }}
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Submission Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li class="mb-2">Make sure your submission addresses all the requirements in the assignment.</li>
+                        <li class="mb-2">Include clear explanations and comments in your work.</li>
+                        <li class="mb-2">Double-check your submission before finalizing it.</li>
+                        <li class="mb-2">If submitting a file URL, ensure the file is accessible to the instructor.</li>
+                        <li>You can edit your submission until the deadline has passed.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const submissionForm = document.getElementById('submission-form');
+        const contentField = document.getElementById('content');
+        const fileUrlField = document.getElementById('file_url');
+        
+        // Validate that at least one field is filled
+        submissionForm.addEventListener('submit', function(e) {
+            if (!contentField.value.trim() && !fileUrlField.value.trim()) {
+                e.preventDefault();
+                alert('Please provide either submission content or a file URL');
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

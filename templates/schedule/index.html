@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Course Schedule{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar {
+        width: 100%;
+    }
+    
+    .calendar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+    }
+    
+    .calendar-weekday {
+        text-align: center;
+        font-weight: 600;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    
+    .calendar-day {
+        min-height: 80px;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .calendar-day:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .calendar-day.other-month {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+    }
+    
+    .calendar-day.today {
+        background-color: #e8f4fe;
+        border-color: #2a41e8;
+    }
+    
+    .calendar-day.selected {
+        background-color: #e8f4fe;
+        border-color: #2a41e8;
+    }
+    
+    .calendar-day-number {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .calendar-day-events {
+        font-size: 0.8rem;
+    }
+    
+    .day-event {
+        padding: 2px 5px;
+        border-radius: 3px;
+        margin-bottom: 2px;
+        background-color: #2a41e8;
+        color: white;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .schedule-item {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background-color: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #2a41e8;
+    }
+    
+    .time-badge {
+        background-color: #2a41e8;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8rem;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('courses') }}">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.name }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Schedule</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Course Schedule</h2>
+                {% if current_user.is_authenticated and current_user.is_instructor() and course.instructor_id == current_user.instructor_profile.id or current_user.is_admin() %}
+                <a href="{{ url_for('schedule_create', course_id=course.id) }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Schedule Class
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Schedule Form (Only shown in create_mode) -->
+        {% if create_mode %}
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">Schedule a Class</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
+                                {{ form.date(class_="form-control", id="date", type="date") }}
+                                {% if form.date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.date.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
+                                {{ form.start_time(class_="form-control", id="start_time", type="time") }}
+                                {% if form.start_time.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.start_time.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
+                                {{ form.end_time(class_="form-control", id="end_time", type="time") }}
+                                {% if form.end_time.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.end_time.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="topic" class="form-label">Topic <span class="text-danger">*</span></label>
+                            {{ form.topic(class_="form-control", id="topic", placeholder="Enter class topic") }}
+                            {% if form.topic.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.topic.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="location" class="form-label">Location</label>
+                            {{ form.location(class_="form-control", id="location", placeholder="Enter class location (virtual or physical)") }}
+                            {% if form.location.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.location.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">For virtual classes, you can enter the meeting link or platform.</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('schedule_index', course_id=course.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                            {{ form.submit(class_="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Calendar View -->
+        <div class="{% if create_mode %}col-lg-4{% else %}col-lg-8{% endif %}">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Calendar</h4>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" id="prev-month">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="mx-2" id="current-month">March 2023</span>
+                            <button class="btn btn-sm btn-outline-secondary" id="next-month">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="calendar">
+                        <div class="calendar-grid">
+                            <div class="calendar-weekday">Sun</div>
+                            <div class="calendar-weekday">Mon</div>
+                            <div class="calendar-weekday">Tue</div>
+                            <div class="calendar-weekday">Wed</div>
+                            <div class="calendar-weekday">Thu</div>
+                            <div class="calendar-weekday">Fri</div>
+                            <div class="calendar-weekday">Sat</div>
+                            
+                            <!-- Calendar days will be dynamically generated by JavaScript -->
+                            <div id="calendar-days"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">Selected Day Events</h4>
+                </div>
+                <div class="card-body">
+                    <div id="day-events">
+                        <p class="text-center text-muted">Select a day to view events</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upcoming Classes -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">Upcoming Classes</h4>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_schedules %}
+                    {% for schedule in upcoming_schedules %}
+                    <div class="schedule-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="mb-0">{{ schedule.topic }}</h5>
+                            <span class="time-badge">
+                                {{ schedule.start_time.strftime('%I:%M %p') }}
+                            </span>
+                        </div>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-calendar-day me-2"></i>{{ schedule.date.strftime('%A, %B %d, %Y') }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-clock me-2"></i>{{ schedule.start_time.strftime('%I:%M %p') }} - {{ schedule.end_time.strftime('%I:%M %p') }}
+                        </p>
+                        {% if schedule.location %}
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-map-marker-alt me-2"></i>{{ schedule.location }}
+                        </p>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-sm btn-primary">
+                                <i class="fas fa-video me-2"></i>Join Class
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No upcoming classes</h5>
+                        <p>There are no scheduled classes for this course yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize calendar variables
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+        
+        // Schedules data - in a real app, this would come from the backend
+        // This is just a placeholder for the calendar functionality
+        const schedules = [];
+        {% for schedule in schedules %}
+        schedules.push({
+            id: {{ schedule.id }},
+            date: "{{ schedule.date }}",
+            topic: "{{ schedule.topic }}",
+            startTime: "{{ schedule.start_time.strftime('%I:%M %p') }}",
+            endTime: "{{ schedule.end_time.strftime('%I:%M %p') }}",
+            location: "{{ schedule.location }}"
+        });
+        {% endfor %}
+        
+        // DOM elements
+        const calendarDays = document.getElementById('calendar-days');
+        const currentMonthDisplay = document.getElementById('current-month');
+        const prevMonthBtn = document.getElementById('prev-month');
+        const nextMonthBtn = document.getElementById('next-month');
+        const dayEvents = document.getElementById('day-events');
+        
+        // Generate calendar
+        function generateCalendar(month, year) {
+            // Clear previous calendar
+            while (calendarDays.firstChild) {
+                calendarDays.removeChild(calendarDays.firstChild);
+            }
+            
+            // Update month display
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                               "July", "August", "September", "October", "November", "December"];
+            currentMonthDisplay.textContent = `${monthNames[month]} ${year}`;
+            
+            // Get first day of month and number of days
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Previous month's days
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const dayElement = createDayElement(daysInPrevMonth - i, true);
+                calendarDays.appendChild(dayElement);
+            }
+            
+            // Current month's days
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayElement = createDayElement(i, false);
+                
+                // Check if this is today
+                const today = new Date();
+                if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    dayElement.classList.add('today');
+                }
+                
+                // Add scheduled events for this day
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const eventsForDay = schedules.filter(schedule => schedule.date === dateStr);
+                
+                if (eventsForDay.length > 0) {
+                    const eventsContainer = document.createElement('div');
+                    eventsContainer.className = 'calendar-day-events';
+                    
+                    eventsForDay.forEach(event => {
+                        const eventElement = document.createElement('div');
+                        eventElement.className = 'day-event';
+                        eventElement.textContent = event.topic;
+                        eventsContainer.appendChild(eventElement);
+                    });
+                    
+                    dayElement.appendChild(eventsContainer);
+                }
+                
+                // Set data attribute for the day
+                dayElement.setAttribute('data-date', dateStr);
+                
+                // Add click event
+                dayElement.addEventListener('click', function() {
+                    // Remove selected class from all days
+                    document.querySelectorAll('.calendar-day').forEach(day => {
+                        day.classList.remove('selected');
+                    });
+                    
+                    // Add selected class to clicked day
+                    this.classList.add('selected');
+                    
+                    // Show events for this day
+                    showEventsForDay(dateStr);
+                });
+                
+                calendarDays.appendChild(dayElement);
+            }
+            
+            // Next month's days
+            const totalCells = 42; // 6 rows of 7 days
+            const remainingCells = totalCells - (firstDay + daysInMonth);
+            for (let i = 1; i <= remainingCells; i++) {
+                const dayElement = createDayElement(i, true);
+                calendarDays.appendChild(dayElement);
+            }
+        }
+        
+        // Create a day element for the calendar
+        function createDayElement(day, isOtherMonth) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            
+            if (isOtherMonth) {
+                dayElement.classList.add('other-month');
+            }
+            
+            const dayNumber = document.createElement('span');
+            dayNumber.className = 'calendar-day-number';
+            dayNumber.textContent = day;
+            
+            dayElement.appendChild(dayNumber);
+            
+            return dayElement;
+        }
+        
+        // Show events for a specific day
+        function showEventsForDay(dateStr) {
+            const eventsForDay = schedules.filter(schedule => schedule.date === dateStr);
+            
+            if (eventsForDay.length > 0) {
+                dayEvents.innerHTML = '';
+                
+                eventsForDay.forEach(event => {
+                    const eventElement = document.createElement('div');
+                    eventElement.className = 'schedule-item';
+                    
+                    eventElement.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="mb-0">${event.topic}</h5>
+                            <span class="time-badge">${event.startTime}</span>
+                        </div>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-clock me-2"></i>${event.startTime} - ${event.endTime}
+                        </p>
+                        ${event.location ? `
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-map-marker-alt me-2"></i>${event.location}
+                        </p>
+                        ` : ''}
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-sm btn-primary">
+                                <i class="fas fa-video me-2"></i>Join Class
+                            </button>
+                        </div>
+                    `;
+                    
+                    dayEvents.appendChild(eventElement);
+                });
+            } else {
+                dayEvents.innerHTML = '<p class="text-center text-muted">No events scheduled for this day</p>';
+            }
+        }
+        
+        // Initialize calendar
+        generateCalendar(currentMonth, currentYear);
+        
+        // Previous month button
+        prevMonthBtn.addEventListener('click', function() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            generateCalendar(currentMonth, currentYear);
+        });
+        
+        // Next month button
+        nextMonthBtn.addEventListener('click', function() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            generateCalendar(currentMonth, currentYear);
+        });
+        
+        // Select current day by default
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const todayElement = document.querySelector(`.calendar-day[data-date="${todayStr}"]`);
+        
+        if (todayElement) {
+            todayElement.classList.add('selected');
+            showEventsForDay(todayStr);
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
