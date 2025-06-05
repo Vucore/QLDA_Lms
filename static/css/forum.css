@@ -1,0 +1,103 @@
+/* Forum styling */
+.forum-topic-header {
+    border-bottom: 1px solid #e3e3e3;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+}
+
+.response {
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #eaeaea;
+    transition: background-color 0.2s;
+}
+
+.response.solution {
+    border-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.response-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eaeaea;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.response-content {
+    padding: 1rem;
+    white-space: pre-line;
+}
+
+.response-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #eaeaea;
+    background-color: #f8f9fa;
+    border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.response-author-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.solution-badge {
+    background-color: #28a745;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.like-button {
+    border: 1px solid #dee2e6;
+    background: none;
+    color: #6c757d;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.like-button:hover {
+    background-color: #f8f9fa;
+}
+
+.like-button.active {
+    background-color: #e6f3f8;
+    color: #007bff;
+    border-color: #b8daff;
+}
+
+.mark-solution {
+    background: none;
+    color: #28a745;
+    border: 1px solid #28a745;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.mark-solution:hover {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.mark-solution.active {
+    background-color: #28a745;
+    color: white;
+}
+
+.forum-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.topic-content {
+    white-space: pre-line;
+    padding: 1rem;
+}

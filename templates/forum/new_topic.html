@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}New Topic - {{ course.name }} Forum{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="mb-4">
+        <h1 class="h3">New Topic</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.name }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('course_forum', course_id=course.id) }}">Forum</a></li>
+                <li class="breadcrumb-item active">New Topic</li>
+            </ol>
+        </nav>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Create New Topic</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.title.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Choose a descriptive title (5-200 characters)
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.content.label(class="form-label") }}
+                            {{ form.content(class="form-control", rows=10) }}
+                            {% if form.content.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.content.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if current_user.is_instructor() or current_user.is_admin() %}
+                        <div class="mb-3 form-check">
+                            {{ form.is_pinned(class="form-check-input") }}
+                            {{ form.is_pinned.label(class="form-check-label") }}
+                            <div class="form-text">
+                                Pinned topics appear at the top of the forum
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('course_forum', course_id=course.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Forum Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Be respectful and polite</span>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Stay on topic</span>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Use clear titles for your topics</span>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Search before posting a new topic</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Follow the course code of conduct</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

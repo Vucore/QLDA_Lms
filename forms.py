@@ -110,3 +110,13 @@ class UserForm(FlaskForm):
             raise ValidationError('Please confirm your password.')
         if not self.password.data and password2.data:
             raise ValidationError('Please provide both password fields or leave them both empty.')
+
+class ForumTopicForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired(), Length(min=5, max=200)])
+    content = TextAreaField('Content', validators=[DataRequired(), Length(min=10)])
+    is_pinned = BooleanField('Pin Topic')  # Chỉ giảng viên được quyền ghim bài
+    submit = SubmitField('Post Topic')
+
+class ForumResponseForm(FlaskForm):
+    content = TextAreaField('Content', validators=[DataRequired(), Length(min=2)])
+    submit = SubmitField('Post Response')

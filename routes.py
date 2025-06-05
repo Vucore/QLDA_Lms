@@ -4,9 +4,9 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 from app import app, db
-from models import User, Student, Instructor, Course, Lesson, Assignment, Submission, Grade, Schedule, Enrollment
+from models import User, Student, Instructor, Course, Lesson, Assignment, Submission, Grade, Schedule, Enrollment, ForumTopic, ForumResponse, ForumLike
 from forms import (LoginForm, RegistrationForm, CourseForm, LessonForm, AssignmentForm, 
-                  SubmissionForm, GradeForm, ScheduleForm, UserForm)
+                  SubmissionForm, GradeForm, ScheduleForm, UserForm, ForumTopicForm, ForumResponseForm)
 from utils import role_required, get_submission
 
 import logging
@@ -334,6 +334,7 @@ def course_detail(course_id):
                            schedules=schedules,
                            is_enrolled=is_enrolled,
                            Course=Course,
+                           ForumTopic=ForumTopic,
                            now=datetime.now())
 
 def allowed_file(filename):
@@ -1463,3 +1464,177 @@ def calculate_completion_rate(course):
     )
     
     return round((submitted_count / total_possible) * 100, 1)
+
+# Forum routes
+@app.route('/course/<int:course_id>/forum')
+@login_required
+def course_forum(course_id):
+    course = Course.query.get_or_404(course_id)
+    
+    # Check if user has access to this course
+    if not current_user.is_admin():
+        if current_user.is_instructor() and course.instructor_id != current_user.instructor_profile.id:
+            abort(403)
+        elif current_user.is_student() and not any(e.course_id == course_id and e.status == 'approved' for e in current_user.student_profile.enrollments):
+            abort(403)
+    
+    # Get all topics for this course
+    pinned_topics = ForumTopic.query.filter_by(course_id=course_id, is_pinned=True).order_by(ForumTopic.updated_at.desc()).all()
+    regular_topics = ForumTopic.query.filter_by(course_id=course_id, is_pinned=False).order_by(ForumTopic.updated_at.desc()).all()
+    
+    return render_template('forum/index.html', course=course, pinned_topics=pinned_topics, regular_topics=regular_topics)
+
+@app.route('/course/<int:course_id>/forum/new', methods=['GET', 'POST'])
+@login_required
+def new_forum_topic(course_id):
+    course = Course.query.get_or_404(course_id)
+    
+    # Check if user has access to this course
+    if current_user.is_student() and not any(e.course_id == course_id and e.status == 'approved' for e in current_user.student_profile.enrollments):
+        abort(403)
+    
+    form = ForumTopicForm()
+    
+    # Only instructors can pin topics
+    if not current_user.is_instructor() and not current_user.is_admin():
+        del form.is_pinned
+    
+    if form.validate_on_submit():
+        topic = ForumTopic(
+            title=form.title.data,
+            content=form.content.data,
+            course_id=course_id,
+            author_id=current_user.id
+        )
+        
+        if current_user.is_instructor() or current_user.is_admin():
+            topic.is_pinned = form.is_pinned.data
+        
+        db.session.add(topic)
+        db.session.commit()
+        
+        flash('Your topic has been posted!', 'success')
+        return redirect(url_for('view_forum_topic', course_id=course_id, topic_id=topic.id))
+    
+    return render_template('forum/new_topic.html', form=form, course=course)
+
+@app.route('/course/<int:course_id>/forum/<int:topic_id>', methods=['GET', 'POST'])
+@login_required
+def view_forum_topic(course_id, topic_id):
+    course = Course.query.get_or_404(course_id)
+    topic = ForumTopic.query.get_or_404(topic_id)
+    
+    # Check if user has access to this course
+    if not current_user.is_admin():
+        if current_user.is_instructor() and course.instructor_id != current_user.instructor_profile.id:
+            abort(403)
+        elif current_user.is_student() and not any(e.course_id == course_id and e.status == 'approved' for e in current_user.student_profile.enrollments):
+            abort(403)
+    
+    # Increment view count
+    topic.view_count += 1
+    db.session.commit()
+    
+    # Get all responses
+    responses = ForumResponse.query.filter_by(topic_id=topic_id).order_by(ForumResponse.created_at).all()
+    
+    # Response form
+    form = ForumResponseForm()
+    if form.validate_on_submit() and not topic.is_locked:
+        response = ForumResponse(
+            content=form.content.data,
+            topic_id=topic_id,
+            author_id=current_user.id
+        )
+        
+        db.session.add(response)
+        db.session.commit()
+        
+        flash('Your response has been posted!', 'success')
+        return redirect(url_for('view_forum_topic', course_id=course_id, topic_id=topic_id))
+    
+    return render_template('forum/view_topic.html', course=course, topic=topic, responses=responses, form=form)
+
+@app.route('/forum/response/<int:response_id>/like', methods=['POST'])
+@login_required
+def like_forum_response(response_id):
+    response = ForumResponse.query.get_or_404(response_id)
+    topic = response.topic
+    
+    # Check if already liked
+    existing_like = ForumLike.query.filter_by(response_id=response_id, user_id=current_user.id).first()
+    
+    if existing_like:
+        # Unlike
+        db.session.delete(existing_like)
+        liked = False
+    else:
+        # Like
+        like = ForumLike(response_id=response_id, user_id=current_user.id)
+        db.session.add(like)
+        liked = True
+    
+    db.session.commit()
+    
+    # For AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        like_count = ForumLike.query.filter_by(response_id=response_id).count()
+        return jsonify({'liked': liked, 'count': like_count})
+    
+    # For regular requests
+    return redirect(url_for('view_forum_topic', course_id=topic.course_id, topic_id=topic.id))
+
+@app.route('/forum/response/<int:response_id>/mark-solution', methods=['POST'])
+@login_required
+def mark_solution(response_id):
+    response = ForumResponse.query.get_or_404(response_id)
+    topic = response.topic
+    
+    # Only instructor of the course or admin can mark solutions
+    if not current_user.is_admin() and (not current_user.is_instructor() or topic.course.instructor_id != current_user.instructor_profile.id):
+        abort(403)
+    
+    # Toggle solution status
+    response.is_solution = not response.is_solution
+    db.session.commit()
+    
+    # For AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'is_solution': response.is_solution})
+    
+    # For regular requests
+    return redirect(url_for('view_forum_topic', course_id=topic.course_id, topic_id=topic.id))
+
+@app.route('/course/<int:course_id>/forum/<int:topic_id>/toggle-lock', methods=['POST'])
+@login_required
+def toggle_topic_lock(course_id, topic_id):
+    course = Course.query.get_or_404(course_id)
+    topic = ForumTopic.query.get_or_404(topic_id)
+    
+    # Only instructor of the course or admin can lock/unlock topics
+    if not current_user.is_admin() and (not current_user.is_instructor() or course.instructor_id != current_user.instructor_profile.id):
+        abort(403)
+    
+    # Toggle locked status
+    topic.is_locked = not topic.is_locked
+    db.session.commit()
+    
+    flash(f"Topic {'locked' if topic.is_locked else 'unlocked'} successfully!", 'success')
+    return redirect(url_for('view_forum_topic', course_id=course_id, topic_id=topic_id))
+
+@app.route('/course/<int:course_id>/forum/<int:topic_id>/toggle-pin', methods=['POST'])
+@login_required
+def toggle_topic_pin(course_id, topic_id):
+    course = Course.query.get_or_404(course_id)
+    topic = ForumTopic.query.get_or_404(topic_id)
+    
+    # Only instructor of the course or admin can pin/unpin topics
+    if not current_user.is_admin() and (not current_user.is_instructor() or course.instructor_id != current_user.instructor_profile.id):
+        abort(403)
+    
+    # Toggle pinned status
+    topic.is_pinned = not topic.is_pinned
+    db.session.commit()
+    
+    flash(f"Topic {'pinned' if topic.is_pinned else 'unpinned'} successfully!", 'success')
+    return redirect(url_for('course_forum', course_id=course_id))

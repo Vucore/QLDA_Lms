@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}{{ topic.title }} - {{ course.name }} Forum{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Forum styling */
+    .forum-topic-header {
+        border-bottom: 1px solid #e3e3e3;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+    }
+
+    .response {
+        margin-bottom: 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #eaeaea;
+        transition: background-color 0.2s;
+    }
+
+    .response.solution {
+        border-color: #28a745;
+        background-color: rgba(40, 167, 69, 0.05);
+    }
+
+    .response-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #eaeaea;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .response-content {
+        padding: 1rem;
+    }
+
+    .response-footer {
+        padding: 0.75rem 1rem;
+        border-top: 1px solid #eaeaea;
+        background-color: #f8f9fa;
+        border-radius: 0 0 0.5rem 0.5rem;
+    }
+
+    .response-author-info img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .solution-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .like-button {
+        border: 1px solid #dee2e6;
+        background: none;
+        color: #6c757d;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        transition: all 0.2s;
+    }
+
+    .like-button:hover {
+        background-color: #f8f9fa;
+    }
+
+    .like-button.active {
+        background-color: #e6f3f8;
+        color: #007bff;
+        border-color: #b8daff;
+    }
+
+    .mark-solution {
+        background: none;
+        color: #28a745;
+        border: 1px solid #28a745;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        transition: all 0.2s;
+    }
+
+    .mark-solution:hover {
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+
+    .mark-solution.active {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .forum-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .topic-content {
+        white-space: pre-line;
+        padding: 1rem;
+    }
+    
+    .response-content {
+        white-space: pre-line;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('course_forum', course_id=course.id) }}">Forum</a></li>
+            <li class="breadcrumb-item active">{{ topic.title }}</li>
+        </ol>
+    </nav>
+
+    <!-- Topic header -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">{{ topic.title }}</h1>
+                
+                <!-- Admin & Instructor Controls -->
+                {% if current_user.is_admin() or (current_user.is_instructor() and course.instructor_id == current_user.instructor_profile.id) %}
+                <div class="forum-actions">
+                    <form method="POST" action="{{ url_for('toggle_topic_lock', course_id=course.id, topic_id=topic.id) }}">
+                        <button type="submit" class="btn btn-sm {% if topic.is_locked %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                            <i class="fas fa-{% if topic.is_locked %}unlock{% else %}lock{% endif %} me-1"></i>
+                            {% if topic.is_locked %}Unlock{% else %}Lock{% endif %} Topic
+                        </button>
+                    </form>
+                    
+                    <form method="POST" action="{{ url_for('toggle_topic_pin', course_id=course.id, topic_id=topic.id) }}">
+                        <button type="submit" class="btn btn-sm {% if topic.is_pinned %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            <i class="fas fa-thumbtack me-1"></i>
+                            {% if topic.is_pinned %}Unpin{% else %}Pin{% endif %} Topic
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Topic content -->
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="response-author-info me-3">
+                        <img src="https://ui-avatars.com/api/?name={{ topic.author.username }}&background=random" alt="{{ topic.author.username }}">
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ topic.author.username }}</div>
+                        <div class="text-muted small">
+                            Posted on {{ topic.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-muted small">
+                    <i class="far fa-comment-alt me-1"></i>{{ topic.responses.count() }} responses
+                    <i class="far fa-eye ms-2 me-1"></i>{{ topic.view_count }} views
+                    {% if topic.is_pinned %}
+                    <span class="badge bg-primary ms-2"><i class="fas fa-thumbtack me-1"></i>Pinned</span>
+                    {% endif %}
+                    {% if topic.is_locked %}
+                    <span class="badge bg-danger ms-2"><i class="fas fa-lock me-1"></i>Locked</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="topic-content">{{ topic.content }}</div>
+        </div>
+    </div>
+    
+    <!-- Responses -->
+    <h3 class="h5 mb-3">
+        {% if topic.responses.count() > 0 %}
+        {{ topic.responses.count() }} Response{{ 's' if topic.responses.count() != 1 }}
+        {% else %}
+        No Responses Yet
+        {% endif %}
+    </h3>
+    
+    {% for response in responses %}
+    <div class="response{% if response.is_solution %} solution{% endif %}" id="response-{{ response.id }}">
+        <div class="response-header">
+            <div class="d-flex justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="response-author-info me-3">
+                        <img src="https://ui-avatars.com/api/?name={{ response.author.username }}&background=random" alt="{{ response.author.username }}">
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ response.author.username }}</div>
+                        <div class="text-muted small">
+                            Posted on {{ response.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if response.is_solution %}
+                <div class="solution-badge">
+                    <i class="fas fa-check-circle me-1"></i> Solution
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="response-content">
+            {{ response.content }}
+        </div>
+        
+        <div class="response-footer">
+            <div class="d-flex justify-content-between">                <div>
+                    <button class="like-button {{ 'active' if response.likes.filter_by(user_id=current_user.id).first() }}" data-response-id="{{ response.id }}">
+                        <i class="{{ 'fas' if response.likes.filter_by(user_id=current_user.id).first() else 'far' }} fa-thumbs-up me-1"></i>
+                        <span class="like-count">{{ response.likes.count() }}</span>
+                    </button>
+                </div>
+                
+                {% if current_user.is_admin() or (current_user.is_instructor() and course.instructor_id == current_user.instructor_profile.id) %}
+                <button class="mark-solution {{ 'active' if response.is_solution }}" data-response-id="{{ response.id }}">
+                    <i class="fa{{ 's' if response.is_solution else 'r' }} fa-check-circle me-1"></i>
+                    {{ 'Marked as Solution' if response.is_solution else 'Mark as Solution' }}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <!-- Reply form -->
+    {% if not topic.is_locked %}
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Post a Reply</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="needs-validation" novalidate>
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""), rows=5, placeholder="Write your response here...") }}
+                    {% if form.content.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.content.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning mt-4">
+        <i class="fas fa-lock me-2"></i>
+        This topic is locked. New responses cannot be added.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle like button clicks
+    document.querySelectorAll('.like-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const responseId = this.getAttribute('data-response-id');
+            const likeCount = this.querySelector('.like-count');
+            const likeIcon = this.querySelector('i');
+            
+            fetch(`/forum/response/${responseId}/like`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({}),
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update like count
+                likeCount.textContent = data.count;
+                
+                // Update button appearance
+                if (data.liked) {
+                    likeIcon.classList.remove('far');
+                    likeIcon.classList.add('fas');
+                    this.classList.add('active');
+                } else {
+                    likeIcon.classList.remove('fas');
+                    likeIcon.classList.add('far');
+                    this.classList.remove('active');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+    
+    // Handle solution marking
+    document.querySelectorAll('.mark-solution').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const responseId = this.getAttribute('data-response-id');
+            const responseElement = document.querySelector(`#response-${responseId}`);
+            
+            fetch(`/forum/response/${responseId}/mark-solution`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({}),
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.is_solution) {
+                    responseElement.classList.add('solution');
+                    this.innerHTML = '<i class="fas fa-check-circle me-1"></i>Marked as Solution';
+                    this.classList.add('active');
+                } else {
+                    responseElement.classList.remove('solution');
+                    this.innerHTML = '<i class="far fa-check-circle me-1"></i>Mark as Solution';
+                    this.classList.remove('active');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+});
+</script>
+{% endblock %}

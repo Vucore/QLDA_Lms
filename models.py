@@ -122,3 +122,51 @@ class Schedule(db.Model):
     topic = db.Column(db.String(120), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
     location = db.Column(db.String(120))
+
+class ForumTopic(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_pinned = db.Column(db.Boolean, default=False)
+    is_locked = db.Column(db.Boolean, default=False)
+    view_count = db.Column(db.Integer, default=0)
+    
+    # Foreign keys
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Relationships
+    course = db.relationship('Course', backref=db.backref('forum_topics', lazy='dynamic', cascade='all, delete-orphan'))
+    author = db.relationship('User')
+    responses = db.relationship('ForumResponse', backref='topic', lazy='dynamic', cascade='all, delete-orphan')
+
+class ForumResponse(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_solution = db.Column(db.Boolean, default=False)  # Đánh dấu câu trả lời giải quyết được vấn đề
+    
+    # Foreign keys
+    topic_id = db.Column(db.Integer, db.ForeignKey('forum_topic.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Relationships
+    author = db.relationship('User')
+    likes = db.relationship('ForumLike', backref='response', lazy='dynamic', cascade='all, delete-orphan')
+
+class ForumLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Foreign keys
+    response_id = db.Column(db.Integer, db.ForeignKey('forum_response.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Relationship
+    user = db.relationship('User')
+    
+    # Unique constraint to prevent multiple likes from the same user
+    __table_args__ = (db.UniqueConstraint('response_id', 'user_id', name='unique_response_like'),)

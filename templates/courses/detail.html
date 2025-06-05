@@ -235,11 +235,11 @@
 </div>
 
 <div class="container mb-5">
-    <!-- Course Tabs -->
-    <div class="course-tabs">
+    <!-- Course Tabs -->    <div class="course-tabs">
         <a href="#" class="course-tab" data-tab="tab-content">Course Content</a>
         <a href="#" class="course-tab" data-tab="tab-assignments">Assignments</a>
         <a href="#" class="course-tab" data-tab="tab-schedule">Schedule</a>
+        <a href="#" class="course-tab" data-tab="tab-forum">Forum</a>
         <a href="#" class="course-tab" data-tab="tab-instructor">Instructor</a>
     </div>
     
@@ -512,6 +512,87 @@
                                 <span>Recordings available after session</span>
                             </li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="course-tab-content" id="tab-forum">
+        <h3 class="mb-4">Discussion Forum</h3>
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="mb-4">
+                    <a href="{{ url_for('course_forum', course_id=course.id) }}" class="btn btn-primary">
+                        <i class="fas fa-comments me-2"></i>Go to Course Forum
+                    </a>
+                    <p class="text-muted mt-2">
+                        Join the discussion with your instructor and classmates. Ask questions, share ideas, and collaborate on course topics.
+                    </p>
+                </div>
+                
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Recent Forum Activity</h5>
+                    </div>
+                    <div class="card-body">
+                        {% set recent_topics = course.forum_topics.order_by(ForumTopic.updated_at.desc()).limit(5).all() %}
+                        
+                        {% if recent_topics %}
+                        <div class="list-group list-group-flush">
+                            {% for topic in recent_topics %}
+                            <a href="{{ url_for('view_forum_topic', course_id=course.id, topic_id=topic.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ topic.title }}</h5>
+                                    <small>{{ topic.created_at.strftime('%b %d') }}</small>
+                                </div>
+                                <p class="mb-1 text-truncate">{{ topic.content }}</p>
+                                <small>
+                                    <span class="text-muted">By {{ topic.author.username }}</span>
+                                    <span class="ms-2"><i class="far fa-comment-alt me-1"></i>{{ topic.responses.count() }}</span>
+                                </small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <div class="text-muted mb-3">
+                                <i class="fas fa-comments fa-3x"></i>
+                            </div>
+                            <h5>No forum topics yet</h5>
+                            <p>Be the first to start a discussion!</p>
+                            <a href="{{ url_for('new_forum_topic', course_id=course.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus-circle me-2"></i>Start Topic
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Forum Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Total Topics:</span>
+                            <span class="fw-bold">{{ course.forum_topics.count() }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Total Responses:</span>
+                            {% set response_count = namespace(total=0) %}
+                            {% for topic in course.forum_topics %}
+                                {% set response_count.total = response_count.total + topic.responses.count() %}
+                            {% endfor %}
+                            <span class="fw-bold">{{ response_count.total }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Active Participants:</span>
+                            <span class="fw-bold">{{ course.enrollments|selectattr('status', 'equalto', 'approved')|list|length }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
