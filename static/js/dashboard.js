@@ -201,4 +201,15 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+  
+  // Add event listener for "Schedule" navigation item
+  const scheduleNavItem = document.getElementById('schedule-nav-item');
+  if (scheduleNavItem) {
+    scheduleNavItem.addEventListener('click', function() {
+      const scheduleUrl = scheduleNavItem.getAttribute('href');
+      if (scheduleUrl) {
+        window.location.href = scheduleUrl;
+      }
+    });
+  }
 });
