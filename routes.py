@@ -1,3 +1,4 @@
+import os
 from flask import render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
@@ -8,6 +9,11 @@ from forms import (LoginForm, RegistrationForm, CourseForm, LessonForm, Assignme
                   SubmissionForm, GradeForm, ScheduleForm, UserForm)
 from utils import role_required
 import logging
+from werkzeug.utils import secure_filename
+
+# Configure file upload settings
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'courses')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 # Home page
 @app.route('/')
@@ -276,9 +282,85 @@ def course_detail(course_id):
                            assignments=assignments,
                            schedules=schedules,
                            is_enrolled=is_enrolled,
-                           enrollment_status=enrollment_status,
-                           enrollment_date=enrollment_date,
-                           Course=Course)
+                           Course=Course,
+                           now=datetime.now())
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_course_image(form_image):
+    """Save a course image file and return the relative path for database storage.
+    
+    Args:
+        form_image: FileStorage object from Flask request.files
+        
+    Returns:
+        str: Relative path to saved image, or None if save failed
+        
+    Raises:
+        Exception: If file is invalid or save fails
+    """
+    if not form_image or not form_image.filename:
+        return None
+
+    if not allowed_file(form_image.filename):
+        raise Exception("Invalid file type. Only JPG and PNG allowed.")
+
+    try:
+        # Verify mimetype and basic image validation
+        if not form_image.content_type.startswith('image/'):
+            raise Exception("File must be an image")
+
+        # Read file content safely
+        form_image.seek(0)
+        file_content = form_image.read()
+        content_size = len(file_content)
+
+        if content_size == 0:
+            app.logger.error("Uploaded file is empty")
+            raise Exception("Empty file uploaded") 
+
+        if content_size > 2 * 1024 * 1024:  # 2MB limit
+            raise Exception("File size exceeds 2MB limit")
+
+        # Create unique filename with timestamp
+        filename = secure_filename(form_image.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        new_filename = f"{timestamp}_{filename}"
+        
+        # Ensure upload directory exists
+        upload_dir = os.path.join(app.static_folder, 'uploads', 'courses')
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir, exist_ok=True)
+        
+        # Save file with explicit binary mode
+        filepath = os.path.join(upload_dir, new_filename)
+        with open(filepath, 'wb') as f:
+            f.write(file_content)
+        
+        # Verify saved file
+        if not os.path.exists(filepath):
+            raise Exception("File failed to save")
+            
+        saved_size = os.path.getsize(filepath)
+        if saved_size == 0:
+            os.remove(filepath)
+            raise Exception("Saved file is empty")
+            
+        if saved_size != content_size:
+            os.remove(filepath) 
+            raise Exception("File corrupted during save")
+
+        app.logger.info(f"Successfully saved image {new_filename} ({content_size} bytes)")
+        return f'uploads/courses/{new_filename}'
+        
+    except Exception as e:
+        app.logger.error(f"Error saving course image: {str(e)}")
+        # Clean up file if it exists
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
+        raise
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 @login_required
@@ -302,11 +384,25 @@ def course_create():
                 flash('Selected instructor not found.', 'danger')
                 return render_template('courses/create.html', form=form, instructors=instructors)
             
+            # Handle image upload
+            image_path = None
+            if 'course_image' in request.files:
+                file = request.files['course_image']
+                if file.filename:
+                    try:
+                        image_path = save_course_image(file)
+                        if not image_path:
+                            flash('Failed to save course image - unknown error.', 'danger')
+                            return render_template('courses/create.html', form=form, instructors=instructors)
+                    except Exception as e:
+                        flash(str(e), 'danger')
+                        return render_template('courses/create.html', form=form, instructors=instructors)
+            
             # Create the course
             course = Course(
                 name=form.name.data,
                 description=form.description.data,
-                image_url=form.image_url.data or None,
+                image_url=image_path,
                 instructor=instructor
             )
             
@@ -367,32 +463,49 @@ def course_create():
 def course_edit(course_id):
     course = Course.query.get_or_404(course_id)
     
-    # Check permissions
-    if current_user.role == 'instructor' and course.instructor_id != current_user.instructor_profile.id:
+    # Check if user is instructor of this course or admin
+    if not current_user.is_admin() and (not current_user.is_instructor() or 
+        current_user.instructor_profile.id != course.instructor_id):
         flash('You do not have permission to edit this course.', 'danger')
-        return redirect(url_for('course_detail', course_id=course.id))
+        return redirect(url_for('course_detail', course_id=course_id))
     
-    if current_user.role == 'student':
-        flash('Students cannot edit courses.', 'danger')
-        return redirect(url_for('course_detail', course_id=course.id))
-    
-    form = CourseForm()
-    
-    if request.method == 'GET':
-        form.name.data = course.name
-        form.description.data = course.description
-        form.image_url.data = course.image_url
-    
+    form = CourseForm(obj=course)
     if form.validate_on_submit():
-        course.name = form.name.data
-        course.description = form.description.data
-        course.image_url = form.image_url.data or None
-        
-        db.session.commit()
-        
-        flash('Course updated successfully!', 'success')
-        return redirect(url_for('course_detail', course_id=course.id))
-    
+        try:
+            file = request.files.get('course_image')
+            if file and file.filename:
+                # Save new image first to validate it
+                try:
+                    image_path = save_course_image(file)
+                    if not image_path:
+                        flash('Failed to save new image - unknown error.', 'danger')
+                        return render_template('courses/edit.html', form=form, course=course)
+
+                    # Only delete old image after successfully saving new one
+                    if course.image_url:
+                        old_image_path = os.path.join(app.static_folder, course.image_url)
+                        if os.path.exists(old_image_path):
+                            try:
+                                os.remove(old_image_path)
+                            except Exception as e:
+                                app.logger.error(f"Error removing old image (not critical): {str(e)}")
+
+                    course.image_url = image_path
+                except Exception as e:
+                    flash(str(e), 'danger')
+                    return render_template('courses/edit.html', form=form, course=course)
+            
+            course.name = form.name.data
+            course.description = form.description.data
+            db.session.commit()
+            flash('Course updated successfully!', 'success')
+            return redirect(url_for('course_detail', course_id=course.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating course: {str(e)}', 'danger')
+            return redirect(request.url)
+            
     return render_template('courses/edit.html', form=form, course=course)
 
 @app.route('/courses/<int:course_id>/enroll', methods=['POST'])
@@ -431,6 +544,7 @@ def course_unenroll(course_id):
         flash('Unenrolled from course successfully!', 'info')
     else:
         flash('You are not enrolled in this course.', 'warning')
+    
     return redirect(url_for('course_detail', course_id=course.id))
 
 @app.route('/courses/<int:course_id>/delete', methods=['POST'])
@@ -633,7 +747,8 @@ def assignment_detail(assignment_id):
                            assignment=assignment, 
                            course=course,
                            submission=submission,
-                           submissions=submissions)
+                           submissions=submissions,
+                           now=datetime.now())
 
 @app.route('/assignments/<int:assignment_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -687,7 +802,7 @@ def submission_create(assignment_id):
     
     # Check if deadline has passed
     if assignment.deadline < datetime.utcnow():
-        flash('The deadline for this assignment has passed.', 'danger')
+        flash('The deadline for this assignment has passed.', 'danger', 'persistent')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
     # Check if student already has a submission
@@ -716,7 +831,10 @@ def submission_create(assignment_id):
         flash('Assignment submitted successfully!', 'success')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
-    return render_template('submissions/create.html', form=form, assignment=assignment)
+    return render_template('submissions/create.html', 
+                           form=form, 
+                           assignment=assignment,
+                           now=datetime.now())
 
 @app.route('/submissions/<int:submission_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -732,7 +850,7 @@ def submission_edit(submission_id):
     
     # Check if deadline has passed
     if assignment.deadline < datetime.utcnow():
-        flash('The deadline for this assignment has passed. You cannot edit your submission.', 'danger')
+        flash('The deadline for this assignment has passed. You cannot edit your submission.', 'danger', 'persistent')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
     form = SubmissionForm()
@@ -751,7 +869,11 @@ def submission_edit(submission_id):
         flash('Submission updated successfully!', 'success')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
-    return render_template('submissions/create.html', form=form, assignment=assignment, submission=submission)
+    return render_template('submissions/create.html', 
+                           form=form, 
+                           assignment=assignment, 
+                           submission=submission,
+                           now=datetime.now())
 
 @app.route('/submissions/<int:submission_id>/grade', methods=['GET', 'POST'])
 @login_required

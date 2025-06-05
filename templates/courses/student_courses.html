@@ -77,11 +77,12 @@
                 {% for course in enrolled_courses %}
                 <div class="col-md-6 col-lg-4">
                     <div class="card course-card h-100 shadow-sm">
-                        <div class="card-header bg-white p-0">
+                        <div class="card-img-top course-image-container">
                             {% if course.image_url %}
-                            <img src="{{ course.image_url }}" class="card-img-top course-image" alt="{{ course.name }}">
+                            <img src="{{ url_for('static', filename=course.image_url) }}" class="course-image"
+                                alt="{{ course.name }}">
                             {% else %}
-                            <div class="card-img-top course-image-placeholder">
+                            <div class="course-image-placeholder">
                                 <i class="fas fa-book fa-3x text-muted"></i>
                             </div>
                             {% endif %}
