@@ -37,9 +37,13 @@
                             </a>
                         </li>
                         <li>
+                            {% if enrolled_courses|length > 0 %}
                             <a id="schedule-nav-item" href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) }}">
                                 <i class="fas fa-calendar-alt"></i> Schedule
                             </a>
+                            {% else %}
+                            <p>No enrolled courses available.</p>
+                            {% endif %}
                         </li>
                         <li>
                             <a href="#">
@@ -67,10 +71,6 @@
 
             <!-- Main Content -->
             <div class="col-lg-9">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2>Dashboard</h2>
-                </div>
-
                 <!-- Stats Cards -->
                 <div class="row mb-4">
                     <div class="col-md-3 col-sm-6">
