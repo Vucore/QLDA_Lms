@@ -20,3 +20,8 @@ def role_required(*roles):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def get_submission(assignment_id, student_id):
+    """Lấy bài nộp của học viên cho một assignment cụ thể"""
+    from models import Submission
+    return Submission.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()

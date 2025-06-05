@@ -59,4 +59,3 @@ package-lock.json
 # Temporary files
 *.tmp
 *~
-instance/lms.db
