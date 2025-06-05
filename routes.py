@@ -281,31 +281,77 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_course_image(form_image):
-    if not form_image:
-        return None
-        
-    if form_image and allowed_file(form_image.filename):
-        try:
-            # Create unique filename
-            filename = secure_filename(form_image.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-            new_filename = f"{timestamp}_{filename}"
-            
-            # Ensure upload directory exists
-            if not os.path.exists(UPLOAD_FOLDER):
-                os.makedirs(UPLOAD_FOLDER)
-            
-            # Save file
-            filepath = os.path.join(UPLOAD_FOLDER, new_filename)
-            form_image.save(filepath)
-            
-            # Return relative path for database
-            return f'uploads/courses/{new_filename}'
-        except Exception as e:
-            app.logger.error(f"Error saving course image: {str(e)}")
-            raise e
+    """Save a course image file and return the relative path for database storage.
     
-    return None
+    Args:
+        form_image: FileStorage object from Flask request.files
+        
+    Returns:
+        str: Relative path to saved image, or None if save failed
+        
+    Raises:
+        Exception: If file is invalid or save fails
+    """
+    if not form_image or not form_image.filename:
+        return None
+
+    if not allowed_file(form_image.filename):
+        raise Exception("Invalid file type. Only JPG and PNG allowed.")
+
+    try:
+        # Verify mimetype and basic image validation
+        if not form_image.content_type.startswith('image/'):
+            raise Exception("File must be an image")
+
+        # Read file content safely
+        form_image.seek(0)
+        file_content = form_image.read()
+        content_size = len(file_content)
+
+        if content_size == 0:
+            app.logger.error("Uploaded file is empty")
+            raise Exception("Empty file uploaded") 
+
+        if content_size > 2 * 1024 * 1024:  # 2MB limit
+            raise Exception("File size exceeds 2MB limit")
+
+        # Create unique filename with timestamp
+        filename = secure_filename(form_image.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        new_filename = f"{timestamp}_{filename}"
+        
+        # Ensure upload directory exists
+        upload_dir = os.path.join(app.static_folder, 'uploads', 'courses')
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir, exist_ok=True)
+        
+        # Save file with explicit binary mode
+        filepath = os.path.join(upload_dir, new_filename)
+        with open(filepath, 'wb') as f:
+            f.write(file_content)
+        
+        # Verify saved file
+        if not os.path.exists(filepath):
+            raise Exception("File failed to save")
+            
+        saved_size = os.path.getsize(filepath)
+        if saved_size == 0:
+            os.remove(filepath)
+            raise Exception("Saved file is empty")
+            
+        if saved_size != content_size:
+            os.remove(filepath) 
+            raise Exception("File corrupted during save")
+
+        app.logger.info(f"Successfully saved image {new_filename} ({content_size} bytes)")
+        return f'uploads/courses/{new_filename}'
+        
+    except Exception as e:
+        app.logger.error(f"Error saving course image: {str(e)}")
+        # Clean up file if it exists
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
+        raise
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 @login_required
@@ -334,7 +380,14 @@ def course_create():
             if 'course_image' in request.files:
                 file = request.files['course_image']
                 if file.filename:
-                    image_path = save_course_image(file)
+                    try:
+                        image_path = save_course_image(file)
+                        if not image_path:
+                            flash('Failed to save course image - unknown error.', 'danger')
+                            return render_template('courses/create.html', form=form, instructors=instructors)
+                    except Exception as e:
+                        flash(str(e), 'danger')
+                        return render_template('courses/create.html', form=form, instructors=instructors)
             
             # Create the course
             course = Course(
@@ -409,27 +462,41 @@ def course_edit(course_id):
     
     form = CourseForm(obj=course)
     if form.validate_on_submit():
-        # Handle image upload if new file is provided
-        if 'course_image' in request.files:
-            file = request.files['course_image']
+        try:
+            file = request.files.get('course_image')
             if file and file.filename:
-                # Delete old image if exists
-                if course.image_url:
-                    old_image_path = os.path.join(app.static_folder, course.image_url)
-                    if os.path.exists(old_image_path):
-                        os.remove(old_image_path)
-                
-                # Save new image
-                image_path = save_course_image(file)
-                if image_path:
+                # Save new image first to validate it
+                try:
+                    image_path = save_course_image(file)
+                    if not image_path:
+                        flash('Failed to save new image - unknown error.', 'danger')
+                        return render_template('courses/edit.html', form=form, course=course)
+
+                    # Only delete old image after successfully saving new one
+                    if course.image_url:
+                        old_image_path = os.path.join(app.static_folder, course.image_url)
+                        if os.path.exists(old_image_path):
+                            try:
+                                os.remove(old_image_path)
+                            except Exception as e:
+                                app.logger.error(f"Error removing old image (not critical): {str(e)}")
+
                     course.image_url = image_path
-        
-        course.name = form.name.data
-        course.description = form.description.data
-        db.session.commit()
-        flash('Course updated successfully!', 'success')
-        return redirect(url_for('course_detail', course_id=course.id))
-        
+                except Exception as e:
+                    flash(str(e), 'danger')
+                    return render_template('courses/edit.html', form=form, course=course)
+            
+            course.name = form.name.data
+            course.description = form.description.data
+            db.session.commit()
+            flash('Course updated successfully!', 'success')
+            return redirect(url_for('course_detail', course_id=course.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating course: {str(e)}', 'danger')
+            return redirect(request.url)
+            
     return render_template('courses/edit.html', form=form, course=course)
 
 @app.route('/courses/<int:course_id>/enroll', methods=['POST'])
