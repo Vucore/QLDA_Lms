@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Instructor Assignments{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar">
+                <div class="sidebar-user">
+                    <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg" class="mb-3">
+                        <circle cx="40" cy="40" r="40" fill="#f0f0f0" />
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30"
+                            fill="#2a41e8">
+                            {{ instructor.full_name[:1] }}
+                        </text>
+                    </svg>
+                    <h5>{{ instructor.full_name }}</h5>
+                    <p>Instructor</p>
+                </div>
+
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="{{ url_for('instructor_dashboard') }}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('instructor_courses') }}">
+                            <i class="fas fa-book"></i> My Courses
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('instructor_assignments') }}" class="active">
+                            <i class="fas fa-tasks"></i> Assignments
+                        </a>
+                    </li>
+                    <li>
+                        <a id="schedule-nav-item"
+                            href="{{ url_for('schedule_index', course_id=courses[0].id) if courses else '#' }}">
+                            <i class="fas fa-calendar-alt"></i> Schedule
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-users"></i> Students
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-chart-bar"></i> Analytics
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('profile') }}">
+                            <i class="fas fa-user-cog"></i> Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Assignments</h2>
+                {% if courses %}
+                <div class="dropdown">
+                    <a href="{{ url_for('assignment_create', course_id=courses[0].id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Assignment
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Filter Options -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="course" class="form-label">Course</label>
+                            <select class="form-select" id="course" name="course">
+                                <option value="">All Courses</option>
+                                {% for course in courses %}
+                                <option value="{{ course.id }}" {% if selected_course==course.id %}selected{% endif %}>
+                                    {{ course.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All Status</option>
+                                <option value="upcoming">Upcoming</option>
+                                <option value="past">Past</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Assignments List -->
+            {% if assignments %}
+            <div class="assignments-list">
+                {% for assignment in assignments %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title mb-1">{{ assignment.title }}</h5>
+                                <p class="text-muted mb-0">{{ assignment.course.name }}</p>
+                            </div>
+                            <span
+                                class="badge {% if assignment.deadline < now %}bg-danger{% else %}bg-primary{% endif %} p-2">
+                                Due: {{ assignment.deadline.strftime('%b %d, %Y at %I:%M %p') }}
+                            </span>
+                        </div>
+                        <p class="card-text">{{ assignment.description|truncate(150) }}</p>
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <span class="text-muted small">
+                                    <i class="fas fa-users me-1"></i>
+                                    {{ assignment.submissions.count() }} submissions out of {{
+                                    assignment.course.enrollments|selectattr('status', 'equalto',
+                                    'approved')|list|length }} students
+                                </span>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{{ url_for('assignment_edit', assignment_id=assignment.id) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </a>
+                                <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
+                {% if courses %}
+                <h4 class="text-muted">No assignments found</h4>
+                <p>Create your first assignment to get started!</p>
+                <a href="{{ url_for('assignment_create', course_id=courses[0].id) }}" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus me-2"></i>Create First Assignment
+                </a>
+                {% else %}
+                <h4 class="text-muted">No courses found</h4>
+                <p>Create a course first to start adding assignments.</p>
+                <a href="{{ url_for('course_create') }}" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus me-2"></i>Create Course
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
