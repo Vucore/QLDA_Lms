@@ -232,6 +232,26 @@ main {
 .alert {
   border-radius: 8px;
   box-shadow: 0 4px 15px var(--shadow-color);
+<<<<<<< HEAD
+=======
+  transition: opacity 0.15s linear;
+}
+
+.alert.hide {
+  opacity: 0;
+}
+
+.alert.show {
+  opacity: 1;
+}
+
+.alert .btn-close {
+  transition: opacity 0.15s linear;
+}
+
+.alert .btn-close:hover {
+  opacity: 0.8;
+>>>>>>> vucore
 }
 
 /* Category icons */

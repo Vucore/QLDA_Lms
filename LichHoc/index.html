@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSchedule - Lịch học</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo-container">
+                    <div class="logo-icon">
+                        <img src="assets/logo.svg" alt="Logo">
+                    </div>
+                    <h1 class="logo-text">EduSchedule</h1>
+                </div>
+                <div class="user-container">
+                    <button class="notification-btn">
+                        <img src="assets/notification.svg" alt="Thông báo">
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar">
+                            <img src="assets/avatar.svg" alt="Avatar">
+                        </div>
+                        <span class="user-name">John Doe</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <nav class="main-nav">
+                    <div class="nav-item active">
+                        <img src="assets/calendar.svg" alt="Lịch học">
+                        <span>Lịch học</span>
+                    </div>
+                    <div class="nav-item">
+                        <img src="assets/courses.svg" alt="Khóa học">
+                        <span>Khóa học</span>
+                    </div>
+                    <div class="nav-item">
+                        <img src="assets/assignments.svg" alt="Bài tập">
+                        <span>Bài tập</span>
+                    </div>
+                    <div class="nav-item">
+                        <img src="assets/progress.svg" alt="Tiến độ">
+                        <span>Tiến độ</span>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="content">
+                <div class="calendar-section">
+                    <div class="calendar-header">
+                        <h2 class="section-title">Lịch học tháng 3, 2025</h2>
+                        <div class="calendar-controls">
+                            <button class="control-btn prev-btn">
+                                <img src="assets/arrow-left.svg" alt="Tháng trước">
+                            </button>
+                            <button class="control-btn next-btn">
+                                <img src="assets/arrow-right.svg" alt="Tháng sau">
+                            </button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="day-label">CN</div>
+                        <div class="day-label">T2</div>
+                        <div class="day-label">T3</div>
+                        <div class="day-label">T4</div>
+                        <div class="day-label">T5</div>
+                        <div class="day-label">T6</div>
+                        <div class="day-label">T7</div>
+                        
+                        <div class="day prev-month">26</div>
+                        <div class="day prev-month">27</div>
+                        <div class="day prev-month">28</div>
+                        <div class="day">1</div>
+                        <div class="day">2</div>
+                        <div class="day">3</div>
+                        <div class="day">4</div>
+                        
+                        <div class="day">5</div>
+                        <div class="day has-event">
+                            <div class="day-number">6</div>
+                            <div class="event math-event">
+                                <div class="event-name">
+                                    <span>Toán cao</span>
+                                    <span>cấp</span>
+                                </div>
+                                <div class="event-time">
+                                    <span>08:00 -</span>
+                                    <span>09:30</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="day">7</div>
+                        <div class="day">8</div>
+                        <div class="day has-event">
+                            <div class="day-number">9</div>
+                            <div class="event coding-event">
+                                <div class="event-name">
+                                    <span>Lập trình</span>
+                                    <span>web</span>
+                                </div>
+                                <div class="event-time">
+                                    <span>13:30 -</span>
+                                    <span>15:00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="day">10</div>
+                        <div class="day">11</div>
+                    </div>
+                </div>
+
+                <div class="upcoming-classes-section">
+                    <h2 class="section-title">Lịch học sắp tới</h2>
+                    <div class="class-list">
+                        <div class="class-card">
+                            <div class="class-info">
+                                <h3 class="class-title">Toán cao cấp</h3>
+                                <p class="class-schedule">Thứ 2, 06/03/2025 • 08:00 - 09:30</p>
+                                <p class="class-location">Phòng 305, Tòa nhà A</p>
+                            </div>
+                            <button class="enter-class-btn">
+                                <span>Vào lớp</span>
+                                <img src="assets/enter-class.svg" alt="Vào lớp">
+                            </button>
+                        </div>
+                        <div class="class-card">
+                            <div class="class-info">
+                                <h3 class="class-title">Lập trình web</h3>
+                                <p class="class-schedule">Thứ 5, 09/03/2025 • 13:30 - 15:00</p>
+                                <p class="class-location">Phòng Lab 2, Tòa nhà B</p>
+                            </div>
+                            <button class="enter-class-btn">
+                                <span>Vào lớp</span>
+                                <img src="assets/enter-class.svg" alt="Vào lớp">
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html> 

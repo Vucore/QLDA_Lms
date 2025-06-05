@@ -2,7 +2,7 @@ import os
 import sys
 from app import app, db
 from models import User, Student, Instructor
-
+# kkhang
 def create_test_users():
     """Create test users for different roles"""
     with app.app_context():

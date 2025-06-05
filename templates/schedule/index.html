@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}EduLearn - Course Schedule{% endblock %}
+{% block title %}EduLearn - {% if current_user.is_instructor() %}Teaching Schedule{% elif current_user.is_student() %}Class Schedule{% else %}Course Schedule{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Modern Calendar Styling based on LichHoc folder */
     .calendar {
         width: 100%;
+    }
+    
+    .calendar-container {
+        background-color: #FFFFFF;
+        border-radius: 8px;
+        box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
     }
     
     .calendar-header {
@@ -13,87 +21,316 @@
         align-items: center;
         justify-content: space-between;
         margin-bottom: 20px;
+        padding: 1.5rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .calendar-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .control-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+        background-color: white;
+    }
+    
+    .control-btn:hover {
+        background-color: #F5F5F5;
     }
     
     .calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 5px;
+        gap: 8px;
+        padding: 0 1.5rem 1.5rem 1.5rem;
     }
     
     .calendar-weekday {
         text-align: center;
         font-weight: 600;
         padding: 10px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
+        color: #525252;
+        font-size: 14px;
     }
     
     .calendar-day {
-        min-height: 80px;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #dee2e6;
+        min-height: 90px;
+        padding: 0.5rem;
+        border-radius: 8px;
+        border: 1px solid #E5E7EB;
         transition: all 0.2s ease;
         cursor: pointer;
+        position: relative;
+        display: flex;
+        flex-direction: column;
     }
     
     .calendar-day:hover {
-        background-color: #f8f9fa;
+        background-color: #F9F9F9;
+        border-color: #D1D5DB;
     }
     
     .calendar-day.other-month {
-        background-color: #f8f9fa;
-        color: #adb5bd;
+        background-color: #FAFAFA;
+        color: #A3A3A3;
     }
     
     .calendar-day.today {
-        background-color: #e8f4fe;
+        background-color: #F0F7FF;
         border-color: #2a41e8;
     }
     
     .calendar-day.selected {
-        background-color: #e8f4fe;
+        background-color: #E8F4FE;
         border-color: #2a41e8;
     }
     
     .calendar-day-number {
-        font-weight: 600;
+        font-weight: 500;
         display: block;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
+        font-size: 14px;
     }
     
     .calendar-day-events {
         font-size: 0.8rem;
+        overflow: hidden;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
     }
     
     .day-event {
-        padding: 2px 5px;
-        border-radius: 3px;
+        padding: 3px 6px;
+        border-radius: 4px;
         margin-bottom: 2px;
-        background-color: #2a41e8;
-        color: white;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        font-size: 11px;
+        line-height: 1.3;
+    }
+    
+    .day-event.teaching-event {
+        background-color: #E0EAFF;
+        color: #3B5FDB;
+        border-left: 2px solid #3B5FDB;
+    }
+    
+    .day-event.learning-event {
+        background-color: #E3FFF3;
+        color: #0C6B45;
+        border-left: 2px solid #0C6B45;
+    }
+    
+    /* Events Section */
+    .events-container {
+        background-color: #FFFFFF;
+        border-radius: 8px;
+        box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        margin-top: 1.5rem;
+    }
+    
+    .events-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .events-header h4 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 18px;
+        color: #262626;
+    }
+    
+    .events-list {
+        padding: 0;
     }
     
     .schedule-item {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        background-color: white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border-left: 4px solid #2a41e8;
+        padding: 1.25rem;
+        border-bottom: 1px solid #E5E7EB;
+        transition: all 0.2s;
+    }
+    
+    .schedule-item:hover {
+        background-color: #FAFAFA;
+    }
+    
+    .schedule-item:last-child {
+        border-bottom: none;
+    }
+    
+    .schedule-item.teaching-item {
+        border-left: 4px solid #3B5FDB;
+    }
+    
+    .schedule-item.learning-item {
+        border-left: 4px solid #0C6B45;
     }
     
     .time-badge {
-        background-color: #2a41e8;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        font-size: 0.8rem;
         display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    
+    .teaching-badge {
+        background-color: #E0EAFF;
+        color: #3B5FDB;
+    }
+    
+    .learning-badge {
+        background-color: #E3FFF3;
+        color: #0C6B45;
+    }
+    
+    .course-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        background-color: #F3F4F6;
+        color: #4B5563;
+        margin-right: 8px;
+    }
+    
+    .schedule-details {
+        display: flex;
+        align-items: center;
+        color: #6B7280;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .schedule-details i {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+        color: #9CA3AF;
+    }
+    
+    .role-toggle {
+        display: flex;
+        background-color: #F3F4F6;
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .role-toggle button {
+        flex: 1;
+        background: none;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #4B5563;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .role-toggle button.active {
+        background-color: #FFFFFF;
+        color: #2a41e8;
+        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Form Styling */
+    .form-container {
+        background-color: #FFFFFF;
+        border-radius: 8px;
+        box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+    
+    .form-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .form-header h4 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 18px;
+        color: #262626;
+    }
+    
+    .form-body {
+        padding: 1.5rem;
+    }
+    
+    /* Empty State Styling */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+    }
+    
+    .empty-state i {
+        font-size: 2.5rem;
+        color: #D1D5DB;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h5 {
+        color: #4B5563;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .empty-state p {
+        color: #6B7280;
+        max-width: 300px;
+        margin: 0 auto;
+        font-size: 14px;
+    }
+    
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background-color: #F9FAFB;
+        border: 1px solid #E5E7EB;
+        color: #4B5563;
+    }
+    
+    .action-btn.primary-btn {
+        background-color: #2a41e8;
+        border-color: #2a41e8;
+        color: white;
+    }
+    
+    .action-btn.primary-btn:hover {
+        background-color: #1e33d9;
+        border-color: #1e33d9;
+    }
+    
+    .action-btn:hover {
+        background-color: #F3F4F6;
+        border-color: #D1D5DB;
     }
 </style>
 {% endblock %}
@@ -105,20 +342,44 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    {% if course %}
                     <li class="breadcrumb-item"><a href="{{ url_for('courses') }}">Courses</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('course_detail', course_id=course.id) }}">{{ course.name }}</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Schedule</li>
+                    {% else %}
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {% if current_user.is_instructor() %}Teaching Schedule{% else %}Class Schedule{% endif %}
+                    </li>
+                    {% endif %}
                 </ol>
             </nav>
             
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Course Schedule</h2>
-                {% if current_user.is_authenticated and current_user.is_instructor() and course.instructor_id == current_user.instructor_profile.id or current_user.is_admin() %}
-                <a href="{{ url_for('schedule_create', course_id=course.id) }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Schedule Class
+                <h2>
+                    {% if course %}
+                    Course Schedule
+                    {% elif current_user.is_instructor() %}
+                    My Teaching Schedule
+                    {% elif current_user.is_student() %}
+                    My Class Schedule
+                    {% else %}
+                    Schedule
+                    {% endif %}
+                </h2>
+                
+                {% if course and current_user.is_authenticated and current_user.is_instructor() and course.instructor_id == current_user.instructor_profile.id or current_user.is_admin() %}
+                <a href="{{ url_for('schedule_create', course_id=course.id) }}" class="action-btn primary-btn">
+                    <i class="fas fa-plus"></i>Schedule Class
                 </a>
                 {% endif %}
             </div>
+            
+            {% if current_user.is_authenticated and current_user.is_instructor() and current_user.is_student() %}
+            <div class="role-toggle" id="role-toggle">
+                <button class="active" data-role="instructor">Teaching Schedule</button>
+                <button data-role="student">Class Schedule</button>
+            </div>
+            {% endif %}
         </div>
     </div>
     
@@ -126,11 +387,11 @@
         <!-- Schedule Form (Only shown in create_mode) -->
         {% if create_mode %}
         <div class="col-lg-8 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h4 class="mb-0">Schedule a Class</h4>
+            <div class="form-container">
+                <div class="form-header">
+                    <h4>Schedule a Class</h4>
                 </div>
-                <div class="card-body">
+                <div class="form-body">
                     <form method="POST" class="needs-validation" novalidate>
                         {{ form.hidden_tag() }}
                         
@@ -199,8 +460,8 @@
                         </div>
                         
                         <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('schedule_index', course_id=course.id) }}" class="btn btn-outline-secondary">Cancel</a>
-                            {{ form.submit(class_="btn btn-primary") }}
+                            <a href="{{ url_for('schedule_index', course_id=course.id) }}" class="action-btn">Cancel</a>
+                            {{ form.submit(class_="action-btn primary-btn") }}
                         </div>
                     </form>
                 </div>
@@ -210,46 +471,41 @@
         
         <!-- Calendar View -->
         <div class="{% if create_mode %}col-lg-4{% else %}col-lg-8{% endif %}">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">Calendar</h4>
-                        <div>
-                            <button class="btn btn-sm btn-outline-secondary" id="prev-month">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <span class="mx-2" id="current-month">March 2023</span>
-                            <button class="btn btn-sm btn-outline-secondary" id="next-month">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <h4 class="mb-0">Calendar</h4>
+                    <div class="calendar-controls">
+                        <button class="control-btn" id="prev-month">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="mx-3" id="current-month">March 2023</span>
+                        <button class="control-btn" id="next-month">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="calendar">
-                        <div class="calendar-grid">
-                            <div class="calendar-weekday">Sun</div>
-                            <div class="calendar-weekday">Mon</div>
-                            <div class="calendar-weekday">Tue</div>
-                            <div class="calendar-weekday">Wed</div>
-                            <div class="calendar-weekday">Thu</div>
-                            <div class="calendar-weekday">Fri</div>
-                            <div class="calendar-weekday">Sat</div>
-                            
-                            <!-- Calendar days will be dynamically generated by JavaScript -->
-                            <div id="calendar-days"></div>
-                        </div>
-                    </div>
+                <div class="calendar-grid">
+                    <div class="calendar-weekday">Sun</div>
+                    <div class="calendar-weekday">Mon</div>
+                    <div class="calendar-weekday">Tue</div>
+                    <div class="calendar-weekday">Wed</div>
+                    <div class="calendar-weekday">Thu</div>
+                    <div class="calendar-weekday">Fri</div>
+                    <div class="calendar-weekday">Sat</div>
+                    
+                    <!-- Calendar days will be dynamically generated by JavaScript -->
                 </div>
             </div>
             
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h4 class="mb-0">Selected Day Events</h4>
+            <div class="events-container">
+                <div class="events-header">
+                    <h4>Selected Day Events</h4>
                 </div>
-                <div class="card-body">
-                    <div id="day-events">
-                        <p class="text-center text-muted">Select a day to view events</p>
+                <div class="events-list" id="day-events">
+                    <div class="empty-state">
+                        <i class="far fa-calendar"></i>
+                        <h5>Select a day to view events</h5>
+                        <p>Click on a date in the calendar to see scheduled classes for that day</p>
                     </div>
                 </div>
             </div>
@@ -257,44 +513,73 @@
         
         <!-- Upcoming Classes -->
         <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h4 class="mb-0">Upcoming Classes</h4>
+            <div class="events-container">
+                <div class="events-header">
+                    <h4>
+                        {% if current_user.is_instructor() %}
+                        Upcoming Classes to Teach
+                        {% else %}
+                        Upcoming Classes
+                        {% endif %}
+                    </h4>
                 </div>
-                <div class="card-body">
+                <div class="events-list">
                     {% if upcoming_schedules %}
                     {% for schedule in upcoming_schedules %}
-                    <div class="schedule-item">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="mb-0">{{ schedule.topic }}</h5>
-                            <span class="time-badge">
-                                {{ schedule.start_time.strftime('%I:%M %p') }}
-                            </span>
-                        </div>
-                        <p class="text-muted mb-2">
-                            <i class="fas fa-calendar-day me-2"></i>{{ schedule.date.strftime('%A, %B %d, %Y') }}
-                        </p>
-                        <p class="text-muted mb-2">
-                            <i class="fas fa-clock me-2"></i>{{ schedule.start_time.strftime('%I:%M %p') }} - {{ schedule.end_time.strftime('%I:%M %p') }}
-                        </p>
-                        {% if schedule.location %}
-                        <p class="text-muted mb-3">
-                            <i class="fas fa-map-marker-alt me-2"></i>{{ schedule.location }}
-                        </p>
+                    <div class="schedule-item {% if current_user.is_instructor() and schedule.course.instructor_id == current_user.instructor_profile.id %}teaching-item{% else %}learning-item{% endif %}">
+                        <span class="time-badge {% if current_user.is_instructor() and schedule.course.instructor_id == current_user.instructor_profile.id %}teaching-badge{% else %}learning-badge{% endif %}">
+                            {{ schedule.start_time.strftime('%I:%M %p') }}
+                        </span>
+                        
+                        <h5 class="mb-2">{{ schedule.topic }}</h5>
+                        
+                        {% if not course %}
+                        <span class="course-badge">{{ schedule.course.name }}</span>
                         {% endif %}
                         
-                        <div class="d-flex justify-content-end">
-                            <button class="btn btn-sm btn-primary">
-                                <i class="fas fa-video me-2"></i>Join Class
-                            </button>
+                        <div class="schedule-details">
+                            <i class="fas fa-calendar-day"></i>
+                            <span>{{ schedule.date.strftime('%A, %B %d, %Y') }}</span>
+                        </div>
+                        
+                        <div class="schedule-details">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ schedule.start_time.strftime('%I:%M %p') }} - {{ schedule.end_time.strftime('%I:%M %p') }}</span>
+                        </div>
+                        
+                        {% if schedule.location %}
+                        <div class="schedule-details mb-3">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ schedule.location }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-end mt-3">
+                            {% if current_user.is_instructor() and schedule.course.instructor_id == current_user.instructor_profile.id %}
+                            <a href="#" class="action-btn primary-btn">
+                                <i class="fas fa-chalkboard-teacher"></i>Start Class
+                            </a>
+                            {% else %}
+                            <a href="#" class="action-btn primary-btn">
+                                <i class="fas fa-video"></i>Join Class
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}
                     {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No upcoming classes</h5>
-                        <p>There are no scheduled classes for this course yet.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-alt"></i>
+                        <h5>No upcoming classes</h5>
+                        <p>
+                            {% if current_user.is_instructor() %}
+                            You have no upcoming classes to teach.
+                            {% elif current_user.is_student() %}
+                            You have no upcoming classes to attend.
+                            {% else %}
+                            There are no scheduled classes for this course yet.
+                            {% endif %}
+                        </p>
                     </div>
                     {% endif %}
                 </div>
@@ -310,34 +595,107 @@
         let currentDate = new Date();
         let currentMonth = currentDate.getMonth();
         let currentYear = currentDate.getFullYear();
+        let currentRole = "{% if current_user.is_instructor() %}instructor{% elif current_user.is_student() %}student{% else %}viewer{% endif %}";
         
-        // Schedules data - in a real app, this would come from the backend
-        // This is just a placeholder for the calendar functionality
-        const schedules = [];
+        // Schedules data
+        const allSchedules = [];
         {% for schedule in schedules %}
-        schedules.push({
+        allSchedules.push({
             id: {{ schedule.id }},
             date: "{{ schedule.date }}",
             topic: "{{ schedule.topic }}",
             startTime: "{{ schedule.start_time.strftime('%I:%M %p') }}",
             endTime: "{{ schedule.end_time.strftime('%I:%M %p') }}",
-            location: "{{ schedule.location }}"
+            location: "{{ schedule.location }}",
+            course: "{{ schedule.course.name }}",
+            courseId: {{ schedule.course.id }},
+            {% if course %}
+            isForCourse: true,
+            {% else %}
+            isForCourse: false,
+            {% endif %}
+            {% if current_user.is_instructor() and schedule.course.instructor_id == current_user.instructor_profile.id %}
+            isTeaching: true,
+            {% else %}
+            isTeaching: false,
+            {% endif %}
+            {% if current_user.is_student() %}
+            isEnrolled: true,
+            {% else %}
+            isEnrolled: false,
+            {% endif %}
         });
         {% endfor %}
         
+        // Filter schedules based on current role
+        let displayedSchedules = filterSchedulesByRole(allSchedules, currentRole);
+        
         // DOM elements
-        const calendarDays = document.getElementById('calendar-days');
+        const calendarGrid = document.querySelector('.calendar-grid');
         const currentMonthDisplay = document.getElementById('current-month');
         const prevMonthBtn = document.getElementById('prev-month');
         const nextMonthBtn = document.getElementById('next-month');
         const dayEvents = document.getElementById('day-events');
+        const roleToggle = document.getElementById('role-toggle');
+        
+        // Role toggle functionality (for users with multiple roles)
+        if (roleToggle) {
+            roleToggle.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Update UI
+                    roleToggle.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update current role
+                    currentRole = this.getAttribute('data-role');
+                    
+                    // Filter schedules
+                    displayedSchedules = filterSchedulesByRole(allSchedules, currentRole);
+                    
+                    // Regenerate calendar
+                    generateCalendar(currentMonth, currentYear);
+                    
+                    // Update the upcoming classes section title
+                    const upcomingTitle = document.querySelector('.events-container .events-header h4');
+                    if (upcomingTitle) {
+                        if (currentRole === 'instructor') {
+                            upcomingTitle.textContent = 'Upcoming Classes to Teach';
+                        } else {
+                            upcomingTitle.textContent = 'Upcoming Classes';
+                        }
+                    }
+                    
+                    // Reload page to update the upcoming classes list
+                    if (window.location.search.includes('role=')) {
+                        window.location.href = window.location.pathname + '?role=' + currentRole;
+                    } else {
+                        if (window.location.search) {
+                            window.location.href = window.location.href + '&role=' + currentRole;
+                        } else {
+                            window.location.href = window.location.href + '?role=' + currentRole;
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Filter schedules based on role
+        function filterSchedulesByRole(allSchedules, role) {
+            if (role === 'instructor') {
+                return allSchedules.filter(schedule => schedule.isTeaching);
+            } else if (role === 'student') {
+                return allSchedules.filter(schedule => schedule.isEnrolled);
+            } else if (role === 'course') {
+                return allSchedules.filter(schedule => schedule.isForCourse);
+            }
+            return allSchedules;
+        }
         
         // Generate calendar
         function generateCalendar(month, year) {
-            // Clear previous calendar
-            while (calendarDays.firstChild) {
-                calendarDays.removeChild(calendarDays.firstChild);
-            }
+            // Clear previous calendar days (keep the weekday headers)
+            const dayElements = calendarGrid.querySelectorAll('.calendar-day');
+            dayElements.forEach(day => day.remove());
             
             // Update month display
             const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -352,7 +710,7 @@
             const daysInPrevMonth = new Date(year, month, 0).getDate();
             for (let i = firstDay - 1; i >= 0; i--) {
                 const dayElement = createDayElement(daysInPrevMonth - i, true);
-                calendarDays.appendChild(dayElement);
+                calendarGrid.appendChild(dayElement);
             }
             
             // Current month's days
@@ -367,18 +725,34 @@
                 
                 // Add scheduled events for this day
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const eventsForDay = schedules.filter(schedule => schedule.date === dateStr);
+                const eventsForDay = displayedSchedules.filter(schedule => schedule.date === dateStr);
                 
                 if (eventsForDay.length > 0) {
                     const eventsContainer = document.createElement('div');
                     eventsContainer.className = 'calendar-day-events';
                     
-                    eventsForDay.forEach(event => {
+                    eventsForDay.slice(0, 2).forEach(event => {
                         const eventElement = document.createElement('div');
                         eventElement.className = 'day-event';
-                        eventElement.textContent = event.topic;
+                        
+                        // Add teaching/learning class based on role
+                        if (event.isTeaching) {
+                            eventElement.classList.add('teaching-event');
+                        } else {
+                            eventElement.classList.add('learning-event');
+                        }
+                        
+                        eventElement.textContent = event.startTime + ' ' + event.topic.substring(0, 10) + (event.topic.length > 10 ? '...' : '');
                         eventsContainer.appendChild(eventElement);
                     });
+                    
+                    // Show +X more if there are more events
+                    if (eventsForDay.length > 2) {
+                        const moreElement = document.createElement('div');
+                        moreElement.className = 'day-event';
+                        moreElement.textContent = `+ ${eventsForDay.length - 2} more`;
+                        eventsContainer.appendChild(moreElement);
+                    }
                     
                     dayElement.appendChild(eventsContainer);
                 }
@@ -400,28 +774,33 @@
                     showEventsForDay(dateStr);
                 });
                 
-                calendarDays.appendChild(dayElement);
+                calendarGrid.appendChild(dayElement);
             }
             
             // Next month's days
-            const totalCells = 42; // 6 rows of 7 days
-            const remainingCells = totalCells - (firstDay + daysInMonth);
+            const totalDaysNeeded = 42; // 6 rows of 7 days
+            const remainingCells = totalDaysNeeded - (firstDay + daysInMonth);
             for (let i = 1; i <= remainingCells; i++) {
-                const dayElement = createDayElement(i, true);
-                calendarDays.appendChild(dayElement);
+                const dayElement = createDayElement(i, true, true);
+                calendarGrid.appendChild(dayElement);
             }
         }
         
         // Create a day element for the calendar
-        function createDayElement(day, isOtherMonth) {
+        function createDayElement(day, isOtherMonth, isNextMonth = false) {
             const dayElement = document.createElement('div');
             dayElement.className = 'calendar-day';
             
             if (isOtherMonth) {
                 dayElement.classList.add('other-month');
+                
+                // Determine date for previous/next month days for event checking
+                const targetDate = new Date(currentYear, currentMonth + (isNextMonth ? 1 : -1), day);
+                const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+                dayElement.setAttribute('data-date', dateStr);
             }
             
-            const dayNumber = document.createElement('span');
+            const dayNumber = document.createElement('div');
             dayNumber.className = 'calendar-day-number';
             dayNumber.textContent = day;
             
@@ -432,7 +811,7 @@
         
         // Show events for a specific day
         function showEventsForDay(dateStr) {
-            const eventsForDay = schedules.filter(schedule => schedule.date === dateStr);
+            const eventsForDay = displayedSchedules.filter(schedule => schedule.date === dateStr);
             
             if (eventsForDay.length > 0) {
                 dayEvents.innerHTML = '';
@@ -441,30 +820,69 @@
                     const eventElement = document.createElement('div');
                     eventElement.className = 'schedule-item';
                     
+                    // Add teaching/learning class based on role
+                    if (event.isTeaching) {
+                        eventElement.classList.add('teaching-item');
+                    } else {
+                        eventElement.classList.add('learning-item');
+                    }
+                    
+                    let courseInfo = '';
+                    if (!event.isForCourse) {
+                        courseInfo = `<span class="course-badge">${event.course}</span>`;
+                    }
+                    
+                    let actionButton = '';
+                    if (event.isTeaching) {
+                        actionButton = `
+                            <a href="#" class="action-btn primary-btn">
+                                <i class="fas fa-chalkboard-teacher"></i> Start Class
+                            </a>
+                        `;
+                    } else {
+                        actionButton = `
+                            <a href="#" class="action-btn primary-btn">
+                                <i class="fas fa-video"></i> Join Class
+                            </a>
+                        `;
+                    }
+                    
                     eventElement.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="mb-0">${event.topic}</h5>
-                            <span class="time-badge">${event.startTime}</span>
+                        <span class="time-badge ${event.isTeaching ? 'teaching-badge' : 'learning-badge'}">
+                            ${event.startTime}
+                        </span>
+                        
+                        <h5 class="mb-2">${event.topic}</h5>
+                        
+                        ${courseInfo}
+                        
+                        <div class="schedule-details">
+                            <i class="fas fa-clock"></i>
+                            <span>${event.startTime} - ${event.endTime}</span>
                         </div>
-                        <p class="text-muted mb-2">
-                            <i class="fas fa-clock me-2"></i>${event.startTime} - ${event.endTime}
-                        </p>
+                        
                         ${event.location ? `
-                        <p class="text-muted mb-3">
-                            <i class="fas fa-map-marker-alt me-2"></i>${event.location}
-                        </p>
+                        <div class="schedule-details mb-3">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${event.location}</span>
+                        </div>
                         ` : ''}
-                        <div class="d-flex justify-content-end">
-                            <button class="btn btn-sm btn-primary">
-                                <i class="fas fa-video me-2"></i>Join Class
-                            </button>
+                        
+                        <div class="d-flex justify-content-end mt-3">
+                            ${actionButton}
                         </div>
                     `;
                     
                     dayEvents.appendChild(eventElement);
                 });
             } else {
-                dayEvents.innerHTML = '<p class="text-center text-muted">No events scheduled for this day</p>';
+                dayEvents.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-calendar-times"></i>
+                        <h5>No events scheduled</h5>
+                        <p>There are no classes scheduled for this day</p>
+                    </div>
+                `;
             }
         }
         

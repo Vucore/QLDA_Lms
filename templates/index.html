@@ -18,9 +18,11 @@
             <div class="col-lg-6 mt-4 mt-lg-0">
                 <!-- Hero Image -->
                 <div class="hero-image text-center">
-                    <svg class="img-fluid" xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300">
-                        <rect width="500" height="300" fill="#f0f0f0"/>
-                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">Hero Image Placeholder</text>
+                    <svg class="img-fluid" xmlns="http://www.w3.org/2000/svg" width="500" height="300"
+                        viewBox="0 0 500 300">
+                        <rect width="500" height="300" fill="#f0f0f0" />
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20"
+                            fill="#aaa">Hero Image Placeholder</text>
                     </svg>
                 </div>
             </div>
@@ -36,23 +38,16 @@
             {% for course in featured_courses %}
             <div class="col-md-4 course-card-wrapper">
                 <div class="card course-card h-100">
-                    {% if course.image_url %}
-                    <div class="card-img-top">
-                        <!-- Using SVG placeholder -->
-                        <svg width="100%" height="180" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="100%" height="100%" fill="#f0f0f0"/>
-                            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">Course Image</text>
-                        </svg>
+                    <div class="card-img-top course-image-container">
+                        {% if course.image_url %}
+                        <img src="{{ url_for('static', filename=course.image_url) }}" class="course-image"
+                            alt="{{ course.name }}">
+                        {% else %}
+                        <div class="course-image-placeholder">
+                            <i class="fas fa-book-open fa-3x text-muted"></i>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <div class="card-img-top">
-                        <!-- Default SVG placeholder -->
-                        <svg width="100%" height="180" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="100%" height="100%" fill="#f0f0f0"/>
-                            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">Course Image</text>
-                        </svg>
-                    </div>
-                    {% endif %}
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="badge bg-primary">Popular</span>
@@ -73,7 +68,8 @@
                     </div>
                     <div class="card-footer d-flex justify-content-between align-items-center">
                         <span class="course-price">$99.99</span>
-                        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-sm btn-outline-primary">View Course</a>
+                        <a href="{{ url_for('course_detail', course_id=course.id) }}"
+                            class="btn btn-sm btn-outline-primary">View Course</a>
                     </div>
                 </div>
             </div>
@@ -179,8 +175,9 @@
                 <div class="testimonial-card">
                     <div class="d-flex align-items-center mb-3">
                         <svg class="testimonial-avatar" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="30" cy="30" r="30" fill="#f0f0f0"/>
-                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">EB</text>
+                            <circle cx="30" cy="30" r="30" fill="#f0f0f0" />
+                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20"
+                                fill="#aaa">EB</text>
                         </svg>
                         <div>
                             <h6 class="mb-0">Emily Brown</h6>
@@ -196,8 +193,9 @@
                 <div class="testimonial-card">
                     <div class="d-flex align-items-center mb-3">
                         <svg class="testimonial-avatar" width="60" height="60" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="30" cy="30" r="30" fill="#f0f0f0"/>
-                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="#aaa">DC</text>
+                            <circle cx="30" cy="30" r="30" fill="#f0f0f0" />
+                            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20"
+                                fill="#aaa">DC</text>
                         </svg>
                         <div>
                             <h6 class="mb-0">David Chen</h6>

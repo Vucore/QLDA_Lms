@@ -4,6 +4,7 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/course-form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/image-preview.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -23,9 +24,9 @@
                     <h3 class="mb-0">Create New Course</h3>
                 </div>
                 <div class="card-body">
-                    <form method="POST" class="needs-validation" novalidate>
+                    <form method="POST" class="needs-validation" enctype="multipart/form-data" novalidate>
                         {{ form.hidden_tag() }}
-                        
+
                         <div class="mb-3">
                             <label for="name" class="form-label">Course Name <span class="text-danger">*</span></label>
                             {{ form.name(class_="form-control", id="name", placeholder="Enter course name") }}
@@ -38,10 +39,12 @@
                             {% endif %}
                             <div class="form-text">Choose a clear, descriptive name for your course.</div>
                         </div>
-                        
+
                         <div class="mb-3">
-                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                            {{ form.description(class_="form-control", id="description", rows=5, placeholder="Enter course description") }}
+                            <label for="description" class="form-label">Description <span
+                                    class="text-danger">*</span></label>
+                            {{ form.description(class_="form-control", id="description", rows=5, placeholder="Enter
+                            course description") }}
                             {% if form.description.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.description.errors %}
@@ -49,28 +52,32 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            <div class="form-text">Provide a detailed description of what students will learn in this course.</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="image_url" class="form-label">Course Image URL</label>
-                            {{ form.image_url(class_="form-control", id="image_url", placeholder="Enter image URL") }}
-                            {% if form.image_url.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.image_url.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <div class="form-text">Add an image URL for your course thumbnail. Leave blank to use a default image.</div>
+                            <div class="form-text">Provide a detailed description of what students will learn in this
+                                course.</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="instructor_id" class="form-label">Assign Instructor <span class="text-danger">*</span></label>
+                            <label for="course_image" class="form-label">Course Image</label>
+                            <input type="file" class="form-control" id="course_image" name="course_image"
+                                accept="image/*">
+                            <div class="form-text">Upload an image for your course thumbnail (JPG, PNG). Maximum size
+                                2MB.</div>
+                            {% if form.image_url %}
+                            <div class="mt-2">
+                                <img src="{{ form.image_url.data }}" alt="Current course image" class="img-thumbnail"
+                                    style="max-height: 200px">
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="instructor_id" class="form-label">Assign Instructor <span
+                                    class="text-danger">*</span></label>
                             <select class="form-select" id="instructor_id" name="instructor_id" required>
                                 <option value="">-- Select Instructor --</option>
                                 {% for instructor in instructors %}
-                                <option value="{{ instructor.id }}">{{ instructor.full_name }} ({{ instructor.expertise or 'No specific expertise' }})</option>
+                                <option value="{{ instructor.id }}">{{ instructor.full_name }} ({{ instructor.expertise
+                                    or 'No specific expertise' }})</option>
                                 {% endfor %}
                             </select>
                             <div class="invalid-feedback">
@@ -129,47 +136,58 @@
                                     <div class="mb-3">
                                         <label class="form-label d-block">Course Visibility</label>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="visibility" id="visibility_public" value="public" checked>
+                                            <input class="form-check-input" type="radio" name="visibility"
+                                                id="visibility_public" value="public" checked>
                                             <label class="form-check-label" for="visibility_public">Public</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="visibility" id="visibility_private" value="private">
+                                            <input class="form-check-input" type="radio" name="visibility"
+                                                id="visibility_private" value="private">
                                             <label class="form-check-label" for="visibility_private">Private</label>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="mb-3">
                                         <label class="form-label d-block">Level</label>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="level" id="level_beginner" value="beginner" checked>
+                                            <input class="form-check-input" type="radio" name="level"
+                                                id="level_beginner" value="beginner" checked>
                                             <label class="form-check-label" for="level_beginner">Beginner</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="level" id="level_intermediate" value="intermediate">
-                                            <label class="form-check-label" for="level_intermediate">Intermediate</label>
+                                            <input class="form-check-input" type="radio" name="level"
+                                                id="level_intermediate" value="intermediate">
+                                            <label class="form-check-label"
+                                                for="level_intermediate">Intermediate</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="level" id="level_advanced" value="advanced">
+                                            <input class="form-check-input" type="radio" name="level"
+                                                id="level_advanced" value="advanced">
                                             <label class="form-check-label" for="level_advanced">Advanced</label>
                                         </div>
                                     </div>
-                                    
+
                                     <div>
                                         <label class="form-label d-block">Categories</label>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="categories" id="category_programming" value="programming">
-                                            <label class="form-check-label" for="category_programming">Programming</label>
+                                            <input class="form-check-input" type="checkbox" name="categories"
+                                                id="category_programming" value="programming">
+                                            <label class="form-check-label"
+                                                for="category_programming">Programming</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="categories" id="category_design" value="design">
+                                            <input class="form-check-input" type="checkbox" name="categories"
+                                                id="category_design" value="design">
                                             <label class="form-check-label" for="category_design">Design</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="categories" id="category_business" value="business">
+                                            <input class="form-check-input" type="checkbox" name="categories"
+                                                id="category_business" value="business">
                                             <label class="form-check-label" for="category_business">Business</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="categories" id="category_marketing" value="marketing">
+                                            <input class="form-check-input" type="checkbox" name="categories"
+                                                id="category_marketing" value="marketing">
                                             <label class="form-check-label" for="category_marketing">Marketing</label>
                                         </div>
                                     </div>

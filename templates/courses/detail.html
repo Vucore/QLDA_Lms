@@ -150,7 +150,8 @@
                 </div>
                 
                 {% if current_user.is_authenticated %}
-                    {% if current_user.is_student() %}                        {% if is_enrolled %}
+                    {% if current_user.is_student() %}
+                        {% if is_enrolled %}
                         <div class="d-flex gap-2">
                             <a href="#course-content" class="btn btn-primary">
                                 <i class="fas fa-play-circle me-2"></i>Continue Learning
