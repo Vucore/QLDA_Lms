@@ -14,15 +14,16 @@
             <div class="sidebar">
                 <div class="sidebar-user">
                     <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg" class="mb-3">
-                        <circle cx="40" cy="40" r="40" fill="#f0f0f0"/>
-                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30" fill="#2a41e8">
+                        <circle cx="40" cy="40" r="40" fill="#f0f0f0" />
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30"
+                            fill="#2a41e8">
                             {{ instructor.full_name[:1] }}
                         </text>
                     </svg>
                     <h5>{{ instructor.full_name }}</h5>
                     <p>Instructor</p>
                 </div>
-                
+
                 <ul class="sidebar-menu">
                     <li>
                         <a href="{{ url_for('instructor_dashboard') }}" class="active">
@@ -35,18 +36,19 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#">
-                            <i class="fas fa-users"></i> Students
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
+                        <a href="{{ url_for('instructor_assignments') }}">
                             <i class="fas fa-tasks"></i> Assignments
                         </a>
                     </li>
                     <li>
-                        <a href="#">
+                        <a id="schedule-nav-item"
+                            href="{{ url_for('schedule_index', course_id=courses[0].id) if courses else '#' }}">
                             <i class="fas fa-calendar-alt"></i> Schedule
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-users"></i> Students
                         </a>
                     </li>
                     <li>
@@ -56,13 +58,18 @@
                     </li>
                     <li>
                         <a href="{{ url_for('profile') }}">
-                            <i class="fas fa-user-cog"></i> Settings
+                            <i class="fas fa-user-cog"></i> Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
                         </a>
                     </li>
                 </ul>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="col-lg-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -73,7 +80,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <!-- Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-3 col-sm-6">
@@ -83,10 +90,12 @@
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
-                    <div class="stats-card">                        <h2>
+                    <div class="stats-card">
+                        <h2>
                             {% set student_count = 0 %}
                             {% for course in courses %}
-                                {% set student_count = student_count + (course.enrollments|selectattr('status', 'equalto', 'approved')|list|length) %}
+                            {% set student_count = student_count + (course.enrollments|selectattr('status', 'equalto',
+                            'approved')|list|length) %}
                             {% endfor %}
                             {{ student_count }}
                         </h2>
@@ -106,11 +115,11 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- My Courses -->
             <div class="dashboard-card mb-4">
                 <h4>My Courses</h4>
-                
+
                 {% if courses %}
                 <div class="row g-4">
                     {% for course in courses %}
@@ -118,13 +127,17 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h5 class="card-title">{{ course.name }}</h5>
-                                <p class="card-text text-muted">{{ course.description|truncate(100) }}</p>                                <div class="d-flex justify-content-between align-items-center mt-auto">
-                                    <span class="badge bg-primary">{{ course.enrollments|selectattr('status', 'equalto', 'approved')|list|length }} Students</span>
+                                <p class="card-text text-muted">{{ course.description|truncate(100) }}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <span class="badge bg-primary">{{ course.enrollments|selectattr('status', 'equalto',
+                                        'approved')|list|length }} Students</span>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('manage_enrollments', course_id=course.id) }}" class="btn btn-outline-success" title="Manage Enrollments">
+                                        <a href="{{ url_for('manage_enrollments', course_id=course.id) }}"
+                                            class="btn btn-outline-success" title="Manage Enrollments">
                                             <i class="fas fa-users-cog"></i>
                                         </a>
-                                        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-outline-primary" title="View Course">
+                                        <a href="{{ url_for('course_detail', course_id=course.id) }}"
+                                            class="btn btn-outline-primary" title="View Course">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </div>
@@ -145,11 +158,11 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- Submissions Needing Grading -->
             <div class="dashboard-card mb-4">
                 <h4>Submissions Needing Grading</h4>
-                
+
                 {% if submissions_needing_grading %}
                 <div class="table-responsive">
                     <table class="table table-hover">
@@ -170,7 +183,8 @@
                                 <td>{{ submission.assignment.course.name }}</td>
                                 <td>{{ submission.submitted_at.strftime('%b %d, %Y') }}</td>
                                 <td>
-                                    <a href="{{ url_for('submission_grade', submission_id=submission.id) }}" class="btn btn-sm btn-primary">Grade</a>
+                                    <a href="{{ url_for('submission_grade', submission_id=submission.id) }}"
+                                        class="btn btn-sm btn-primary">Grade</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -185,11 +199,11 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- Recent Assignments -->
             <div class="dashboard-card mb-4">
                 <h4>Recent Assignments</h4>
-                
+
                 {% if recent_assignments %}
                 <div class="table-responsive">
                     <table class="table table-hover">
@@ -208,9 +222,12 @@
                                 <td>{{ assignment.title }}</td>
                                 <td>{{ assignment.course.name }}</td>
                                 <td>{{ assignment.deadline.strftime('%b %d, %Y') }}</td>
-                                <td>{{ assignment.submissions.count() }} / {{ assignment.course.enrollments|selectattr('status', 'equalto', 'approved')|list|length }}</td>
+                                <td>{{ assignment.submissions.count() }} / {{
+                                    assignment.course.enrollments|selectattr('status', 'equalto',
+                                    'approved')|list|length }}</td>
                                 <td>
-                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('assignment_detail', assignment_id=assignment.id) }}"
+                                        class="btn btn-sm btn-outline-primary">View</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -225,11 +242,11 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- Upcoming Live Classes -->
             <div class="dashboard-card">
                 <h4>Upcoming Live Classes</h4>
-                
+
                 {% if upcoming_schedules %}
                 {% for schedule in upcoming_schedules %}
                 <div class="event-item">
@@ -241,7 +258,8 @@
                         <h6>{{ schedule.topic }}</h6>
                         <p class="mb-1">{{ schedule.course.name }}</p>
                         <p class="mb-0">
-                            <i class="fas fa-clock me-1"></i>{{ schedule.start_time.strftime('%I:%M %p') }} - {{ schedule.end_time.strftime('%I:%M %p') }}
+                            <i class="fas fa-clock me-1"></i>{{ schedule.start_time.strftime('%I:%M %p') }} - {{
+                            schedule.end_time.strftime('%I:%M %p') }}
                             {% if schedule.location %}
                             <i class="fas fa-map-marker-alt ms-3 me-1"></i>{{ schedule.location }}
                             {% endif %}
@@ -261,7 +279,7 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- Student Distribution Chart (Hidden for now)
             <div class="dashboard-card mt-4">
                 <h4>Student Distribution</h4>
@@ -277,13 +295,13 @@
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chart-config.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Initialize student distribution chart
         const studentData = {
             labels: ['Web Development', 'Design', 'Business', 'Marketing', 'Photography'],
             values: [45, 25, 15, 10, 5]
         };
-        
+
         if (document.getElementById('student-distribution')) {
             createStudentDistributionChart('student-distribution', studentData);
         }

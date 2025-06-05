@@ -37,18 +37,19 @@
                             </a>
                         </li>
                         <li>
-                            {% if enrolled_courses|length > 0 %}
-                            <a id="schedule-nav-item" href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) }}">
-                                <i class="fas fa-calendar-alt"></i> Schedule
+                            <a href="{{ url_for('student_assignments') }}">
+                                <i class="fas fa-tasks"></i> Assignments
                             </a>
                             {% else %}
                             <p>No enrolled courses available.</p>
                             {% endif %}
                         </li>
                         <li>
-                            <a href="#">
-                                <i class="fas fa-tasks"></i> Assignments
+                            {% if enrolled_courses|length > 0 %}
+                            <a id="schedule-nav-item" href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) }}">
+                                <i class="fas fa-calendar-alt"></i> Schedule
                             </a>
+                            {% endif %}
                         </li>
                         <li>
                             <a href="#">
@@ -62,7 +63,12 @@
                         </li>
                         <li>
                             <a href="{{ url_for('profile') }}">
-                                <i class="fas fa-user-cog"></i> Settings
+                                <i class="fas fa-user-cog"></i> Profile
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
                         </li>
                     </ul>

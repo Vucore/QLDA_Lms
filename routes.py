@@ -1,5 +1,5 @@
 import os
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
@@ -7,7 +7,8 @@ from app import app, db
 from models import User, Student, Instructor, Course, Lesson, Assignment, Submission, Grade, Schedule, Enrollment
 from forms import (LoginForm, RegistrationForm, CourseForm, LessonForm, AssignmentForm, 
                   SubmissionForm, GradeForm, ScheduleForm, UserForm)
-from utils import role_required
+from utils import role_required, get_submission
+
 import logging
 from werkzeug.utils import secure_filename
 
@@ -135,25 +136,51 @@ def student_dashboard():
     
     # Get upcoming assignments
     upcoming_assignments = []
+    past_assignments = []
+    submissions = {}
+    
     for course in enrolled_courses:
-        assignments = Assignment.query.filter_by(course_id=course.id).filter(Assignment.deadline >= datetime.utcnow()).order_by(Assignment.deadline).all()
-        upcoming_assignments.extend(assignments)
+        # Get upcoming assignments
+        course_upcoming = Assignment.query.filter_by(course_id=course.id)\
+            .filter(Assignment.deadline >= datetime.utcnow())\
+            .order_by(Assignment.deadline).all()
+        upcoming_assignments.extend(course_upcoming)
+        
+        # Get past assignments
+        course_past = Assignment.query.filter_by(course_id=course.id)\
+            .filter(Assignment.deadline < datetime.utcnow())\
+            .order_by(Assignment.deadline.desc()).all()
+        past_assignments.extend(course_past)
+        
+        # Get submissions for all assignments
+        for assignment in course_upcoming + course_past:
+            submission = Submission.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=student.id
+            ).first()
+            submissions[assignment.id] = submission
     
     # Get recent submissions
-    recent_submissions = Submission.query.filter_by(student_id=student.id).order_by(Submission.submitted_at.desc()).limit(5).all()
+    recent_submissions = Submission.query.filter_by(student_id=student.id)\
+        .order_by(Submission.submitted_at.desc()).limit(5).all()
     
     # Get upcoming schedules
     upcoming_schedules = []
     for course in enrolled_courses:
-        schedules = Schedule.query.filter_by(course_id=course.id).filter(Schedule.date >= datetime.utcnow().date()).order_by(Schedule.date, Schedule.start_time).all()
+        schedules = Schedule.query.filter_by(course_id=course.id)\
+            .filter(Schedule.date >= datetime.utcnow().date())\
+            .order_by(Schedule.date, Schedule.start_time).all()
         upcoming_schedules.extend(schedules)
     
     return render_template('dashboard/student.html', 
-                           student=student, 
-                           enrolled_courses=enrolled_courses, 
+                           student=student,
+                           enrolled_courses=enrolled_courses,
                            upcoming_assignments=upcoming_assignments,
+                           past_assignments=past_assignments, 
+                           submissions=submissions,
                            recent_submissions=recent_submissions,
-                           upcoming_schedules=upcoming_schedules)
+                           upcoming_schedules=upcoming_schedules,
+                           now=datetime.utcnow())
 
 @app.route('/student/courses')
 @login_required
@@ -186,33 +213,53 @@ def instructor_dashboard():
     # Get instructor's courses
     courses = instructor.courses.all()
     
-    # Get recent assignments
+    # Get assignments data
     recent_assignments = []
-    for course in courses:
-        assignments = Assignment.query.filter_by(course_id=course.id).order_by(Assignment.created_at.desc()).limit(3).all()
-        recent_assignments.extend(assignments)
-    
-    # Get recent submissions needing grading
     submissions_needing_grading = []
+    course_stats = {}
+    
     for course in courses:
+        # Get recent assignments for this course
+        course_assignments = Assignment.query.filter_by(course_id=course.id)\
+            .order_by(Assignment.deadline.desc()).limit(3).all()
+        for assignment in course_assignments:
+            assignment.course_name = course.name  # Add course name for display
+        recent_assignments.extend(course_assignments)
+        
+        # Get submissions needing grading
         for assignment in course.assignments:
-            submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
-            for submission in submissions:
-                if not submission.grade:  # No grade yet
-                    submissions_needing_grading.append(submission)
+            ungraded_submissions = Submission.query.filter_by(assignment_id=assignment.id)\
+                .filter(~Submission.grade.has())\
+                .all()
+            for submission in ungraded_submissions:
+                submissions_needing_grading.append(submission)
+        
+        # Calculate course statistics
+        enrolled_students = [e for e in course.enrollments if e.status == 'approved']
+        course_stats[course.id] = {
+            'student_count': len(enrolled_students),
+            'assignment_count': len(course.assignments.all()),
+            'completion_rate': calculate_completion_rate(course)
+        }
+    
+    # Sort submissions by submission date
+    submissions_needing_grading.sort(key=lambda x: x.submitted_at, reverse=True)
     
     # Get upcoming schedules
     upcoming_schedules = []
     for course in courses:
-        schedules = Schedule.query.filter_by(course_id=course.id).filter(Schedule.date >= datetime.utcnow().date()).order_by(Schedule.date, Schedule.start_time).all()
+        schedules = Schedule.query.filter_by(course_id=course.id)\
+            .filter(Schedule.date >= datetime.utcnow().date())\
+            .order_by(Schedule.date, Schedule.start_time).all()
         upcoming_schedules.extend(schedules)
     
     return render_template('dashboard/instructor.html', 
-                           instructor=instructor, 
-                           courses=courses, 
-                           recent_assignments=recent_assignments,
-                           submissions_needing_grading=submissions_needing_grading,
-                           upcoming_schedules=upcoming_schedules)
+                         instructor=instructor,
+                         courses=courses,
+                         recent_assignments=recent_assignments,
+                         submissions_needing_grading=submissions_needing_grading,
+                         course_stats=course_stats,
+                         upcoming_schedules=upcoming_schedules)
 
 @app.route('/instructor/courses')
 @login_required
@@ -244,13 +291,17 @@ def admin_dashboard():
     # Get all courses
     courses = Course.query.all()
     
+    # Check if admin_settings route exists
+    has_admin_settings = 'admin_settings' in current_app.view_functions
+    
     return render_template('dashboard/admin.html', 
                            user_count=user_count,
                            student_count=student_count,
                            instructor_count=instructor_count,
                            course_count=course_count,
                            recent_users=recent_users,
-                           courses=courses)
+                           courses=courses,
+                           has_admin_settings=has_admin_settings)
 
 # Course routes
 @app.route('/courses')
@@ -660,7 +711,7 @@ def lesson_detail(lesson_id):
         # Sinh viên phải đăng ký khóa học để xem bài giảng
         enrollment = Enrollment.query.filter_by(student_id=current_user.student_profile.id, course_id=course.id, status='approved').first()
         if not enrollment:
-            flash('You must be enrolled in this course to view lessons.', 'danger')
+            flash('You must be enrolled in the course to view lessons.', 'danger')
             return redirect(url_for('course_detail', course_id=course.id))
     elif current_user.role == 'instructor' and course.instructor_id != current_user.instructor_profile.id:
         # Giáo viên chỉ có thể xem bài giảng của khóa học do họ dạy
@@ -989,7 +1040,12 @@ def schedule_create(course_id):
 @role_required('admin')
 def admin_users():
     users = User.query.all()
-    return render_template('dashboard/admin.html', users=users, section='users')
+    # Check if admin_settings route exists
+    has_admin_settings = 'admin_settings' in current_app.view_functions
+    return render_template('dashboard/admin.html', 
+                         users=users, 
+                         section='users',
+                         has_admin_settings=has_admin_settings)
 
 @app.route('/admin/courses')
 @login_required
@@ -1010,11 +1066,15 @@ def admin_courses():
         'courses_with_no_students': courses_with_no_students
     }
     
+    # Check if admin_settings route exists
+    has_admin_settings = 'admin_settings' in current_app.view_functions
+    
     return render_template('dashboard/admin.html', 
                           courses=courses, 
                           instructors=instructors, 
                           course_stats=course_stats,
-                          section='courses')
+                          section='courses',
+                          has_admin_settings=has_admin_settings)
 
 @app.route('/admin/users/create', methods=['GET', 'POST'])
 @login_required
@@ -1299,3 +1359,107 @@ def remove_student_from_course(enrollment_id):
     
     flash(f'Removed {student_name} from the course.', 'info')
     return redirect(url_for('manage_enrollments', course_id=course.id))
+
+@app.route('/instructor/assignments')
+@login_required
+@role_required('instructor')
+def instructor_assignments():
+    instructor = current_user.instructor_profile
+    courses = instructor.courses.all()
+    
+    # Get filter parameters
+    selected_course = request.args.get('course', type=int)
+    status = request.args.get('status')
+    
+    # Base query
+    assignments_query = Assignment.query.join(Course).filter(Course.instructor_id == instructor.id)
+    
+    # Apply filters
+    if selected_course:
+        assignments_query = assignments_query.filter(Assignment.course_id == selected_course)
+    
+    if status:
+        now = datetime.utcnow()
+        if status == 'upcoming':
+            assignments_query = assignments_query.filter(Assignment.deadline >= now)
+        elif status == 'past':
+            assignments_query = assignments_query.filter(Assignment.deadline < now)
+    
+    # Get all assignments
+    assignments = assignments_query.order_by(Assignment.deadline).all()
+    
+    return render_template('assignments/instructor_assignments.html',
+                          instructor=instructor,
+                          courses=courses,
+                          assignments=assignments,
+                          selected_course=selected_course,
+                          now=datetime.utcnow())
+
+@app.route('/student/assignments')
+@login_required
+@role_required('student')
+def student_assignments():
+    student = current_user.student_profile
+    enrolled_courses = [enrollment.course for enrollment in student.enrollments if enrollment.status == 'approved']
+    
+    # Get filter parameters
+    selected_course = request.args.get('course', type=int)
+    status = request.args.get('status')
+    
+    # Get assignments from enrolled courses
+    course_ids = [course.id for course in enrolled_courses]
+    assignments_query = Assignment.query.filter(Assignment.course_id.in_(course_ids))
+    
+    # Apply filters
+    if selected_course:
+        assignments_query = assignments_query.filter(Assignment.course_id == selected_course)
+    
+    if status:
+        now = datetime.utcnow()
+        if status == 'upcoming':
+            assignments_query = assignments_query.filter(Assignment.deadline >= now)
+        elif status == 'submitted':
+            # Get assignments that have submissions from this student
+            submitted_assignments = Submission.query.filter_by(student_id=student.id).with_entities(Submission.assignment_id)
+            assignments_query = assignments_query.filter(Assignment.id.in_(submitted_assignments))
+        elif status == 'missing':
+            # Get assignments with passed deadline and no submission
+            submitted_assignments = Submission.query.filter_by(student_id=student.id).with_entities(Submission.assignment_id)
+            assignments_query = assignments_query.filter(Assignment.deadline < now)\
+                .filter(~Assignment.id.in_(submitted_assignments))
+        elif status == 'graded':
+            # Get assignments that have graded submissions from this student
+            graded_submissions = Submission.query.join(Grade)\
+                .filter(Submission.student_id == student.id)\
+                .with_entities(Submission.assignment_id)
+            assignments_query = assignments_query.filter(Assignment.id.in_(graded_submissions))
+    
+    # Get all assignments
+    assignments = assignments_query.order_by(Assignment.deadline).all()
+    
+    return render_template('assignments/student_assignments.html',
+                          student=student,
+                          enrolled_courses=enrolled_courses,
+                          assignments=assignments,
+                          selected_course=selected_course,
+                          now=datetime.utcnow(),
+                          get_submission=get_submission)
+
+def calculate_completion_rate(course):
+    """Calculate the completion rate for a course based on assignment submissions."""
+    enrolled_students = [e for e in course.enrollments if e.status == 'approved']
+    assignments = course.assignments.all()
+    if not enrolled_students or not assignments:
+        return 0
+    
+    total_possible = len(enrolled_students) * len(assignments)
+    if total_possible == 0:
+        return 0
+        
+    submitted_count = sum(
+        1 for assignment in assignments
+        for submission in assignment.submissions
+        if submission.student_id in [e.student_id for e in enrolled_students]
+    )
+    
+    return round((submitted_count / total_possible) * 100, 1)
