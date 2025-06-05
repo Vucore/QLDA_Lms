@@ -42,10 +42,11 @@
                             </a>
                         </li>
                         <li>
-                            <a id="schedule-nav-item"
-                                href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) if enrolled_courses else '#' }}">
+                            {% if enrolled_courses|length > 0 %}
+                            <a id="schedule-nav-item" href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) }}">
                                 <i class="fas fa-calendar-alt"></i> Schedule
                             </a>
+                            {% endif %}
                         </li>
                         <li>
                             <a href="#">
