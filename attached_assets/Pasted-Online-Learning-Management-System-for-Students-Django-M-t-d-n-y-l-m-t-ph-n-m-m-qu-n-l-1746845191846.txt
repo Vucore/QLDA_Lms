@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Online Learning Management System for Students (Django)
 
 Mô tả dự án
@@ -135,4 +136,143 @@ Sử dụng CSS và JavaScript để cải thiện trải nghiệm người dùn
 - **start_time**: Time
 - **end_time**: Time
 - **topic**: String
+=======
+Online Learning Management System for Students (Django)
+
+Mô tả dự án
+
+Đây là một phần mềm quản lý học trực tuyến dành cho sinh viên được xây dựng bằng framework **Django** (Python). Hệ thống cho phép sinh viên tham gia khóa học, xem tài liệu, làm bài tập, tham gia thảo luận và xem điểm. Giảng viên có thể tạo khóa học, đăng tài liệu và bài tập, chấm điểm và quản lý sinh viên trong khóa học của mình.
+
+---
+
+Tính năng chính
+
+Sinh viên
+- Đăng ký/Đăng nhập hệ thống
+- Xem danh sách khóa học đang tham gia
+- Xem bài giảng, tài liệu học
+- Làm bài tập và nộp bài
+- Xem điểm và phản hồi từ giảng viên
+- Tham gia thảo luận trong khóa học
+
+Giảng viên
+- Đăng ký/Đăng nhập hệ thống
+- Tạo và quản lý khóa học
+- Đăng tài liệu học, video, bài tập
+- Chấm điểm và gửi phản hồi cho sinh viên
+- Quản lý danh sách sinh viên
+
+Quản trị viên
+- Quản lý người dùng (giảng viên, sinh viên)
+- Quản lý toàn bộ khóa học, nội dung
+- Gỡ bỏ nội dung vi phạm
+
+---
+
+Kiến trúc dự án
+
+Django>=3.2,<4.0
+# Add other dependencies here as needed
+
+
+1. Xây dựng Dashboard cho từng vai trò
+Student Dashboard:
+Hiển thị danh sách các khóa học đã đăng ký.
+Hiển thị bài tập, bài giảng, và điểm số.
+Instructor Dashboard:
+Hiển thị danh sách các khóa học mà giảng viên đang giảng dạy.
+Quản lý bài giảng, bài tập, và điểm số của sinh viên.
+Admin Dashboard:
+Quản lý người dùng (thêm, sửa, xóa tài khoản).
+Quản lý các khóa học.
+2. Chức năng quản lý khóa học
+Admin:
+Tạo, sửa, xóa khóa học.
+Instructor:
+Thêm bài giảng, bài tập vào khóa học.
+Student:
+Đăng ký khóa học.
+3. Chức năng bài tập và điểm số
+Instructor:
+Tạo bài tập, chấm điểm bài nộp của sinh viên.
+Student:
+Nộp bài tập, xem điểm số.
+4. Chức năng thông báo
+Gửi thông báo đến sinh viên hoặc giảng viên về các sự kiện quan trọng (hạn nộp bài, bài giảng mới, v.v.).
+5. Tối ưu giao diện người dùng
+Tạo giao diện thân thiện và dễ sử dụng cho từng vai trò.
+Sử dụng CSS và JavaScript để cải thiện trải nghiệm người dùng.
+
+# Database Description for Online Learning Management System
+
+## Tables and Relationships
+
+### CustomUser
+- **id**: Integer, Primary Key
+- **username**: String, Unique
+- **email**: String, Unique
+- **password**: String
+- **role**: Enum (Student, Instructor, Admin)
+
+### Student
+- **id**: Integer, Primary Key
+- **user_id**: Foreign Key to `CustomUser`
+- **full_name**: String
+- **email**: String
+- **enrolled_courses**: Many-to-Many relationship with `Course`
+
+### Instructor
+- **id**: Integer, Primary Key
+- **user_id**: Foreign Key to `CustomUser`
+- **full_name**: String
+- **email**: String
+- **expertise**: String
+
+### Course
+- **id**: Integer, Primary Key
+- **name**: String
+- **description**: Text
+- **teacher_id**: Foreign Key to `Instructor`
+
+### Enrollment
+- **id**: Integer, Primary Key
+- **student_id**: Foreign Key to `Student`
+- **course_id**: Foreign Key to `Course`
+- **enrollment_date**: DateTime
+
+### Lesson
+- **id**: Integer, Primary Key
+- **title**: String
+- **content**: Text
+- **file_url**: String
+- **order**: Integer
+- **course_id**: Foreign Key to `Course`
+
+### Assignment
+- **id**: Integer, Primary Key
+- **title**: String
+- **description**: Text
+- **deadline**: DateTime
+- **course_id**: Foreign Key to `Course`
+
+### Submission
+- **id**: Integer, Primary Key
+- **file_url**: String
+- **submitted_at**: DateTime
+- **assignment_id**: Foreign Key to `Assignment`
+- **student_id**: Foreign Key to `Student`
+
+### Grade
+- **id**: Integer, Primary Key
+- **score**: Float
+- **feedback**: Text
+- **submission_id**: Foreign Key to `Submission`
+
+### Schedule
+- **id**: Integer, Primary Key
+- **date**: Date
+- **start_time**: Time
+- **end_time**: Time
+- **topic**: String
+>>>>>>> Hung
 - **course_id**: Foreign Key to `Course`
