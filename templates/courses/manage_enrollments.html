@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Enrollments - {{ course.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-users-cog me-2"></i>Manage Enrollments</h2>
+                    <p class="text-muted mb-0">Course: {{ course.name }}</p>
+                </div>
+                <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Course
+                </a>
+            </div>
+
+            <!-- Add Student Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add Student to Course</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('add_student_to_course', course_id=course.id) }}" method="POST">
+                        <div class="row align-items-end">
+                            <div class="col-md-8">
+                                <label for="student_id" class="form-label">Select Student</label>
+                                <select name="student_id" id="student_id" class="form-select">
+                                    <option value="">Choose a student...</option>
+                                    {% for student in available_students %}
+                                    <option value="{{ student.id }}">{{ student.full_name }} ({{ student.user.username }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-plus me-1"></i>Add Student
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Enrollment Management Tabs -->
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="enrollmentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                                <i class="fas fa-clock me-1"></i>Pending 
+                                <span class="badge bg-warning ms-1">{{ pending_enrollments|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab">
+                                <i class="fas fa-check me-1"></i>Approved 
+                                <span class="badge bg-success ms-1">{{ approved_enrollments|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected" type="button" role="tab">
+                                <i class="fas fa-times me-1"></i>Rejected 
+                                <span class="badge bg-danger ms-1">{{ rejected_enrollments|length }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="enrollmentTabContent">
+                        <!-- Pending Enrollments -->
+                        <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                            {% if pending_enrollments %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Full Name</th>
+                                            <th>Requested Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for enrollment in pending_enrollments %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle me-2">
+                                                        {{ enrollment.student.user.username[0].upper() }}
+                                                    </div>
+                                                    {{ enrollment.student.user.username }}
+                                                </div>
+                                            </td>
+                                            <td>{{ enrollment.student.full_name }}</td>
+                                            <td>{{ enrollment.enrolled_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <form action="{{ url_for('approve_enrollment', enrollment_id=enrollment.id) }}" method="POST" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-success" title="Approve">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form action="{{ url_for('reject_enrollment', enrollment_id=enrollment.id) }}" method="POST" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-danger" title="Reject">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No pending enrollment requests</h5>
+                                <p class="text-muted">Students will appear here when they request to join this course.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Approved Enrollments -->
+                        <div class="tab-pane fade" id="approved" role="tabpanel">
+                            {% if approved_enrollments %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Full Name</th>
+                                            <th>Enrolled Date</th>
+                                            <th>Approved Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for enrollment in approved_enrollments %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle bg-success me-2">
+                                                        {{ enrollment.student.user.username[0].upper() }}
+                                                    </div>
+                                                    {{ enrollment.student.user.username }}
+                                                </div>
+                                            </td>
+                                            <td>{{ enrollment.student.full_name }}</td>
+                                            <td>{{ enrollment.enrolled_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                {% if enrollment.approved_at %}
+                                                {{ enrollment.approved_at.strftime('%Y-%m-%d %H:%M') }}
+                                                {% else %}
+                                                <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <form action="{{ url_for('remove_student_from_course', enrollment_id=enrollment.id) }}" method="POST" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="return confirm('Are you sure you want to remove this student?')" 
+                                                            title="Remove Student">
+                                                        <i class="fas fa-user-minus"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No enrolled students</h5>
+                                <p class="text-muted">Approved students will appear here.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Rejected Enrollments -->
+                        <div class="tab-pane fade" id="rejected" role="tabpanel">
+                            {% if rejected_enrollments %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Full Name</th>
+                                            <th>Requested Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for enrollment in rejected_enrollments %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle bg-danger me-2">
+                                                        {{ enrollment.student.user.username[0].upper() }}
+                                                    </div>
+                                                    {{ enrollment.student.user.username }}
+                                                </div>
+                                            </td>
+                                            <td>{{ enrollment.student.full_name }}</td>
+                                            <td>{{ enrollment.enrolled_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <form action="{{ url_for('approve_enrollment', enrollment_id=enrollment.id) }}" method="POST" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Approve">
+                                                        <i class="fas fa-check"></i> Re-approve
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-user-times fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No rejected enrollments</h5>
+                                <p class="text-muted">Rejected enrollment requests will appear here.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background-color: #6c757d;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.avatar-circle.bg-success {
+    background-color: #198754 !important;
+}
+
+.avatar-circle.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.card-header-tabs .nav-link {
+    border-bottom: none;
+}
+
+.card-header-tabs .nav-link.active {
+    background-color: white;
+    border-bottom: 1px solid white;
+}
+</style>
+{% endblock %}

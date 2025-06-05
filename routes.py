@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 from app import app, db
-from models import User, Student, Instructor, Course, Lesson, Assignment, Submission, Grade, Schedule
+from models import User, Student, Instructor, Course, Lesson, Assignment, Submission, Grade, Schedule, Enrollment
 from forms import (LoginForm, RegistrationForm, CourseForm, LessonForm, AssignmentForm, 
                   SubmissionForm, GradeForm, ScheduleForm, UserForm)
 from utils import role_required
@@ -124,8 +124,8 @@ def student_dashboard():
     # Get student profile
     student = current_user.student_profile
     
-    # Get enrolled courses
-    enrolled_courses = student.enrolled_courses
+    # Get enrolled courses (approved only)
+    enrolled_courses = [enrollment.course for enrollment in student.enrollments if enrollment.status == 'approved']
     
     # Get upcoming assignments
     upcoming_assignments = []
@@ -155,16 +155,19 @@ def student_dashboard():
 def student_courses():
     # Get student profile
     student = current_user.student_profile
-    
-    # Get enrolled courses
-    enrolled_courses = student.enrolled_courses
-    
+    # Get enrolled courses (approved only)
+    enrolled_courses = [enrollment.course for enrollment in student.enrollments if enrollment.status == 'approved']
+    # Get pending enrollments
+    pending_enrollments = [enrollment for enrollment in student.enrollments if enrollment.status == 'pending']
     # Get recommended courses (courses not enrolled in)
-    recommended_courses = Course.query.filter(~Course.id.in_([c.id for c in enrolled_courses])).limit(3).all()
-    
+    enrolled_course_ids = [c.id for c in enrolled_courses]
+    pending_course_ids = [e.course.id for e in pending_enrollments]
+    excluded_ids = enrolled_course_ids + pending_course_ids
+    recommended_courses = Course.query.filter(~Course.id.in_(excluded_ids)).limit(3).all()
     return render_template('courses/student_courses.html',
                           student=student,
                           enrolled_courses=enrolled_courses,
+                          pending_enrollments=pending_enrollments,
                           recommended_courses=recommended_courses)
 
 @app.route('/dashboard/instructor')
@@ -256,10 +259,16 @@ def course_detail(course_id):
     assignments = course.assignments.all()
     schedules = course.schedules.filter(Schedule.date >= datetime.utcnow().date()).order_by(Schedule.date, Schedule.start_time).all()
     
-    # Check if current user is enrolled
+    # Check enrollment status for students
     is_enrolled = False
+    enrollment_status = None
+    enrollment_date = None
     if current_user.is_authenticated and current_user.is_student():
-        is_enrolled = course in current_user.student_profile.enrolled_courses
+        enrollment = Enrollment.query.filter_by(student_id=current_user.student_profile.id, course_id=course.id).first()
+        if enrollment:
+            enrollment_status = enrollment.status
+            enrollment_date = enrollment.enrolled_at
+            is_enrolled = enrollment.status == 'approved'
     
     return render_template('courses/detail.html', 
                            course=course, 
@@ -267,6 +276,8 @@ def course_detail(course_id):
                            assignments=assignments,
                            schedules=schedules,
                            is_enrolled=is_enrolled,
+                           enrollment_status=enrollment_status,
+                           enrollment_date=enrollment_date,
                            Course=Course)
 
 @app.route('/courses/create', methods=['GET', 'POST'])
@@ -390,14 +401,21 @@ def course_edit(course_id):
 def course_enroll(course_id):
     course = Course.query.get_or_404(course_id)
     student = current_user.student_profile
-    
-    if course in student.enrolled_courses:
-        flash('You are already enrolled in this course.', 'info')
+      # Kiểm tra đã có yêu cầu chưa
+    existing = Enrollment.query.filter_by(student_id=student.id, course_id=course.id).first()
+    if existing:
+        if existing.status == 'approved':
+            flash('You are already enrolled in this course.', 'info')
+        elif existing.status == 'pending':
+            flash('Your enrollment request is pending approval.', 'info')
+        elif existing.status == 'rejected':
+            flash('Your previous enrollment request was rejected.', 'warning')
     else:
-        student.enrolled_courses.append(course)
+        # Tạo yêu cầu mới
+        enrollment = Enrollment(student_id=student.id, course_id=course.id, status='pending')
+        db.session.add(enrollment)
         db.session.commit()
-        flash('Enrolled in course successfully!', 'success')
-    
+        flash('Enrollment request sent. Please wait for instructor approval.', 'success')
     return redirect(url_for('course_detail', course_id=course.id))
 
 @app.route('/courses/<int:course_id>/unenroll', methods=['POST'])
@@ -406,14 +424,13 @@ def course_enroll(course_id):
 def course_unenroll(course_id):
     course = Course.query.get_or_404(course_id)
     student = current_user.student_profile
-    
-    if course in student.enrolled_courses:
-        student.enrolled_courses.remove(course)
+    enrollment = Enrollment.query.filter_by(student_id=student.id, course_id=course.id, status='approved').first()
+    if enrollment:
+        db.session.delete(enrollment)
         db.session.commit()
         flash('Unenrolled from course successfully!', 'info')
     else:
         flash('You are not enrolled in this course.', 'warning')
-    
     return redirect(url_for('course_detail', course_id=course.id))
 
 @app.route('/courses/<int:course_id>/delete', methods=['POST'])
@@ -524,11 +541,11 @@ def lesson_edit(lesson_id):
 def lesson_detail(lesson_id):
     lesson = Lesson.query.get_or_404(lesson_id)
     course = lesson.course
-    
-    # Kiểm tra quyền truy cập
+      # Kiểm tra quyền truy cập
     if current_user.role == 'student':
         # Sinh viên phải đăng ký khóa học để xem bài giảng
-        if course not in current_user.student_profile.enrolled_courses:
+        enrollment = Enrollment.query.filter_by(student_id=current_user.student_profile.id, course_id=course.id, status='approved').first()
+        if not enrollment:
             flash('You must be enrolled in this course to view lessons.', 'danger')
             return redirect(url_for('course_detail', course_id=course.id))
     elif current_user.role == 'instructor' and course.instructor_id != current_user.instructor_profile.id:
@@ -662,9 +679,9 @@ def assignment_edit(assignment_id):
 @role_required('student')
 def submission_create(assignment_id):
     assignment = Assignment.query.get_or_404(assignment_id)
-    
-    # Check if student is enrolled in the course
-    if assignment.course not in current_user.student_profile.enrolled_courses:
+      # Check if student is enrolled in the course
+    enrollment = Enrollment.query.filter_by(student_id=current_user.student_profile.id, course_id=assignment.course.id, status='approved').first()
+    if not enrollment:
         flash('You must be enrolled in the course to submit assignments.', 'danger')
         return redirect(url_for('assignment_detail', assignment_id=assignment.id))
     
@@ -858,12 +875,11 @@ def admin_users():
 def admin_courses():
     courses = Course.query.all()
     instructors = Instructor.query.all()
-    
-    # Calculate some statistics for courses
+      # Calculate some statistics for courses
     total_courses = len(courses)
-    total_students_enrolled = sum(course.enrolled_students.count() for course in courses)
+    total_students_enrolled = sum(len([e for e in course.enrollments if e.status == 'approved']) for course in courses)
     avg_students_per_course = total_students_enrolled / total_courses if total_courses > 0 else 0
-    courses_with_no_students = sum(1 for course in courses if course.enrolled_students.count() == 0)
+    courses_with_no_students = sum(1 for course in courses if len([e for e in course.enrollments if e.status == 'approved']) == 0)
     
     course_stats = {
         'total_courses': total_courses,
@@ -1030,3 +1046,134 @@ def admin_user_reset_password(user_id):
     
     flash('Password reset successfully!', 'success')
     return redirect(url_for('admin_users'))
+
+# Enrollment Management Routes for Instructors
+@app.route('/courses/<int:course_id>/enrollments')
+@login_required
+@role_required('instructor')
+def manage_enrollments(course_id):
+    course = Course.query.get_or_404(course_id)
+    
+    # Check if instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id and not current_user.is_admin():
+        flash('You can only manage enrollments for your own courses.', 'danger')
+        return redirect(url_for('instructor_courses'))
+    
+    # Get all enrollments for this course
+    pending_enrollments = Enrollment.query.filter_by(course_id=course.id, status='pending').all()
+    approved_enrollments = Enrollment.query.filter_by(course_id=course.id, status='approved').all()
+    rejected_enrollments = Enrollment.query.filter_by(course_id=course.id, status='rejected').all()
+    
+    # Get all students for the add student dropdown
+    all_students = Student.query.all()
+    enrolled_student_ids = [e.student_id for e in approved_enrollments]
+    available_students = [s for s in all_students if s.id not in enrolled_student_ids]
+    
+    return render_template('courses/manage_enrollments.html',
+                         course=course,
+                         pending_enrollments=pending_enrollments,
+                         approved_enrollments=approved_enrollments,
+                         rejected_enrollments=rejected_enrollments,
+                         available_students=available_students)
+
+@app.route('/enrollments/<int:enrollment_id>/approve', methods=['POST'])
+@login_required
+@role_required('instructor')
+def approve_enrollment(enrollment_id):
+    enrollment = Enrollment.query.get_or_404(enrollment_id)
+    course = enrollment.course
+    
+    # Check if instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id and not current_user.is_admin():
+        flash('You can only manage enrollments for your own courses.', 'danger')
+        return redirect(url_for('instructor_courses'))
+    
+    enrollment.status = 'approved'
+    enrollment.approved_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash(f'Approved enrollment for {enrollment.student.user.username}!', 'success')
+    return redirect(url_for('manage_enrollments', course_id=course.id))
+
+@app.route('/enrollments/<int:enrollment_id>/reject', methods=['POST'])
+@login_required
+@role_required('instructor')
+def reject_enrollment(enrollment_id):
+    enrollment = Enrollment.query.get_or_404(enrollment_id)
+    course = enrollment.course
+    
+    # Check if instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id and not current_user.is_admin():
+        flash('You can only manage enrollments for your own courses.', 'danger')
+        return redirect(url_for('instructor_courses'))
+    
+    enrollment.status = 'rejected'
+    db.session.commit()
+    
+    flash(f'Rejected enrollment for {enrollment.student.user.username}.', 'info')
+    return redirect(url_for('manage_enrollments', course_id=course.id))
+
+@app.route('/courses/<int:course_id>/add-student', methods=['POST'])
+@login_required
+@role_required('instructor')
+def add_student_to_course(course_id):
+    course = Course.query.get_or_404(course_id)
+    
+    # Check if instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id and not current_user.is_admin():
+        flash('You can only manage enrollments for your own courses.', 'danger')
+        return redirect(url_for('instructor_courses'))
+    
+    student_id = request.form.get('student_id')
+    if not student_id:
+        flash('Please select a student.', 'warning')
+        return redirect(url_for('manage_enrollments', course_id=course.id))
+    
+    student = Student.query.get_or_404(student_id)
+    
+    # Check if enrollment already exists
+    existing_enrollment = Enrollment.query.filter_by(student_id=student.id, course_id=course.id).first()
+    if existing_enrollment:
+        if existing_enrollment.status == 'approved':
+            flash(f'{student.user.username} is already enrolled in this course.', 'warning')
+        elif existing_enrollment.status == 'pending':
+            flash(f'{student.user.username} enrollment is already pending.', 'info')
+        else:  # rejected
+            # Change status to approved
+            existing_enrollment.status = 'approved'
+            existing_enrollment.approved_at = datetime.utcnow()
+            db.session.commit()
+            flash(f'Re-enrolled {student.user.username} in the course!', 'success')
+    else:
+        # Create new enrollment
+        new_enrollment = Enrollment(
+            student_id=student.id,
+            course_id=course.id,
+            status='approved',
+            enrolled_at=datetime.utcnow(),
+            approved_at=datetime.utcnow()
+        )
+        db.session.add(new_enrollment)
+        db.session.commit()
+        flash(f'Added {student.user.username} to the course!', 'success')
+    
+    return redirect(url_for('manage_enrollments', course_id=course.id))
+
+@app.route('/enrollments/<int:enrollment_id>/remove', methods=['POST'])
+@login_required
+@role_required('instructor')
+def remove_student_from_course(enrollment_id):
+    enrollment = Enrollment.query.get_or_404(enrollment_id)
+    course = enrollment.course
+    
+    # Check if instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id and not current_user.is_admin():
+        flash('You can only manage enrollments for your own courses.', 'danger')
+        return redirect(url_for('instructor_courses'))
+    
+    student_name = enrollment.student.user.username
+    db.session.delete(enrollment)
+    db.session.commit()
+    
+    flash(f'Removed {student_name} from the course.', 'info')
+    return redirect(url_for('manage_enrollments', course_id=course.id))
