@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.full_name }} - {{ course.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+    .student-header {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .student-info {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .student-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: #2a41e8;
+    }
+
+    .submission-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        padding-bottom: 1.5rem;
+        border-left: 2px solid #e9ecef;
+    }
+
+    .timeline-item:last-child {
+        border-left: none;
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: -0.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+    }
+
+    .status-pending {
+        background-color: #ffc107;
+    }
+
+    .status-submitted {
+        background-color: #17a2b8;
+    }
+
+    .status-graded {
+        background-color: #28a745;
+    }
+
+    .status-overdue {
+        background-color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar">
+                <!-- ... existing sidebar code ... -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('instructor_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('instructor_students') }}">Students</a></li>
+                    <li class="breadcrumb-item active">{{ student.full_name }}</li>
+                </ol>
+            </nav>
+
+            <div class="student-header">
+                <div class="student-info">
+                    <div class="student-avatar">
+                        {{ student.full_name[:1] }}
+                    </div>
+                    <div>
+                        <h2 class="mb-1">{{ student.full_name }}</h2>
+                        <p class="text-muted mb-2">{{ student.user.email }}</p>
+                        <div
+                            class="badge bg-{{ 'success' if enrollment.status == 'approved' else 'warning' if enrollment.status == 'pending' else 'danger' }}">
+                            {{ enrollment.status|title }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mb-4">Assignment Progress</h3>
+
+            <div class="submission-timeline">
+                {% for item in submissions %}
+                <div class="submission-card">
+                    <div class="timeline-item">
+                        <div
+                            class="timeline-dot 
+                            {{- ' status-graded' if item.grade else ' status-submitted' if item.submission else ' status-pending' if item.assignment.deadline > now else ' status-overdue' -}}">
+                        </div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">{{ item.assignment.title }}</h5>
+                                <p class="text-muted mb-2">Due: {{ item.assignment.deadline.strftime('%Y-%m-%d %H:%M')
+                                    }}</p>
+
+                                {% if item.submission %}
+                                <p class="mb-2">
+                                    Submitted: {{ item.submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}
+                                    {% if item.submission.file_url %}
+                                    <a href="{{ item.submission.file_url }}" class="ms-2"><i
+                                            class="fas fa-download"></i> Download</a>
+                                    {% endif %}
+                                </p>
+                                {% if item.grade %}
+                                <div class="alert alert-success mb-0">
+                                    Grade: {{ item.grade.score }}%
+                                    {% if item.grade.feedback %}
+                                    <p class="mb-0 mt-2"><small>{{ item.grade.feedback }}</small></p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                {% if item.assignment.deadline > now %}
+                                <p class="text-muted mb-0">Not submitted yet</p>
+                                {% else %}
+                                <p class="text-danger mb-0">Overdue</p>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+
+                            {% if item.submission and not item.grade %}
+                            <div>
+                                <a href="{{ url_for('grade_submission', submission_id=item.submission.id) }}"
+                                    class="btn btn-primary btn-sm">
+                                    Grade Submission
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

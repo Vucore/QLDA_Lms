@@ -23,7 +23,6 @@
                     <h5>{{ instructor.full_name }}</h5>
                     <p>Instructor</p>
                 </div>
-
                 <ul class="sidebar-menu">
                     <li>
                         <a href="{{ url_for('instructor_dashboard') }}">
@@ -47,7 +46,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#">
+                        <a href="{{ url_for('instructor_students') }}">
                             <i class="fas fa-users"></i> Students
                         </a>
                     </li>

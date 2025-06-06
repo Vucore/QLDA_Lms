@@ -128,59 +128,62 @@ def dashboard():
 @login_required
 @role_required('student')
 def student_dashboard():
-    # Get student profile
     student = current_user.student_profile
     
-    # Get enrolled courses (approved only)
-    enrolled_courses = [enrollment.course for enrollment in student.enrollments if enrollment.status == 'approved']
+    # Get enrolled courses
+    enrolled_courses = [e.course for e in student.enrollments if e.status == 'approved']
     
-    # Get upcoming assignments
-    upcoming_assignments = []
-    past_assignments = []
-    submissions = {}
+    # Calculate statistics
+    total_completed_courses = 0
+    total_hours = 0
+    total_assignments_completed = 0
+    total_score = 0
+    total_graded = 0
     
     for course in enrolled_courses:
-        # Get upcoming assignments
-        course_upcoming = Assignment.query.filter_by(course_id=course.id)\
-            .filter(Assignment.deadline >= datetime.utcnow())\
-            .order_by(Assignment.deadline).all()
-        upcoming_assignments.extend(course_upcoming)
-        
-        # Get past assignments
-        course_past = Assignment.query.filter_by(course_id=course.id)\
-            .filter(Assignment.deadline < datetime.utcnow())\
-            .order_by(Assignment.deadline.desc()).all()
-        past_assignments.extend(course_past)
-        
-        # Get submissions for all assignments
-        for assignment in course_upcoming + course_past:
+        assignments = Assignment.query.filter_by(course_id=course.id).all()
+        for assignment in assignments:
             submission = Submission.query.filter_by(
-                assignment_id=assignment.id,
-                student_id=student.id
+                student_id=student.id,
+                assignment_id=assignment.id
             ).first()
-            submissions[assignment.id] = submission
+            
+            if submission:
+                total_assignments_completed += 1
+                if submission.grade:
+                    total_score += submission.grade.score
+                    total_graded += 1
+        
+        # Estimate hours based on lessons and assignments
+        lessons_count = course.lessons.count()
+        assignments_count = len(assignments)
+        # Assume average 1 hour per lesson and 2 hours per assignment
+        course_hours = (lessons_count * 1) + (assignments_count * 2)
+        total_hours += course_hours
+        
+        # Check if course is completed (all assignments submitted and graded)
+        if assignments and total_assignments_completed == len(assignments):
+            total_completed_courses += 1
     
-    # Get recent submissions
-    recent_submissions = Submission.query.filter_by(student_id=student.id)\
-        .order_by(Submission.submitted_at.desc()).limit(5).all()
+    # Calculate average score
+    avg_score = total_score / total_graded if total_graded > 0 else 0
     
-    # Get upcoming schedules
-    upcoming_schedules = []
-    for course in enrolled_courses:
-        schedules = Schedule.query.filter_by(course_id=course.id)\
-            .filter(Schedule.date >= datetime.utcnow().date())\
-            .order_by(Schedule.date, Schedule.start_time).all()
-        upcoming_schedules.extend(schedules)
+    # Get pending enrollments
+    pending_enrollments = [e.course for e in student.enrollments if e.status == 'pending']
     
-    return render_template('dashboard/student.html', 
-                           student=student,
-                           enrolled_courses=enrolled_courses,
-                           upcoming_assignments=upcoming_assignments,
-                           past_assignments=past_assignments, 
-                           submissions=submissions,
-                           recent_submissions=recent_submissions,
-                           upcoming_schedules=upcoming_schedules,
-                           now=datetime.utcnow())
+    # Get recommended courses
+    recommended_courses = Course.query.filter(
+        ~Course.id.in_([c.id for c in enrolled_courses + pending_enrollments])
+    ).limit(3).all()
+    
+    return render_template('dashboard/student.html',
+                         student=student,
+                         enrolled_courses=enrolled_courses,
+                         pending_enrollments=pending_enrollments,
+                         recommended_courses=recommended_courses,
+                         total_completed_courses=total_completed_courses,
+                         total_hours=total_hours,
+                         avg_score=avg_score)
 
 @app.route('/student/courses')
 @login_required
@@ -1209,11 +1212,34 @@ def admin_user_delete(user_id):
     if user.id == current_user.id:
         flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('admin_users'))
+
+    # If user is an instructor, check if they have any courses
+    if user.is_instructor() and user.instructor_profile:
+        courses = user.instructor_profile.courses.all()
+        if courses:
+            admin = User.query.filter_by(role='admin').first()
+            if not admin:
+                flash('Cannot delete instructor - no admin found to transfer courses to.', 'danger')
+                return redirect(url_for('admin_users'))
+            
+            # Create instructor profile for admin if doesn't exist
+            if not admin.instructor_profile:
+                admin_instructor = Instructor(user=admin, full_name=admin.username)
+                db.session.add(admin_instructor)
+                db.session.flush()  # To get the instructor_id
+            
+            # Transfer courses to admin
+            for course in courses:
+                course.instructor_id = admin.instructor_profile.id
     
-    db.session.delete(user)
-    db.session.commit()
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        flash('User deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting user: ' + str(e), 'danger')
     
-    flash('User deleted successfully!', 'success')
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/users/<int:user_id>/reset-password', methods=['POST'])
@@ -1463,3 +1489,243 @@ def calculate_completion_rate(course):
     )
     
     return round((submitted_count / total_possible) * 100, 1)
+
+@app.route('/instructor/students')
+@login_required
+@role_required('instructor')
+def instructor_students():
+    instructor = current_user.instructor_profile
+    
+    # Get all courses taught by this instructor and select first course for schedule link
+    courses = instructor.courses.order_by(Course.created_at.desc()).all()
+    first_course_id = courses[0].id if courses else None
+    
+    # Dictionary to store course and student info
+    course_data = {}
+    
+    for course in courses:
+        # Get all enrollments for this course
+        enrollments = (Enrollment.query
+                      .filter_by(course_id=course.id)
+                      .order_by(Enrollment.status.desc(), Enrollment.enrolled_at.desc())
+                      .all())
+        
+        # Get all assignments for this course
+        assignments = (Assignment.query
+                      .filter_by(course_id=course.id)
+                      .order_by(Assignment.deadline)
+                      .all())
+        
+        # Calculate student statistics for this course
+        student_data = []
+        total_submissions = 0
+        total_grades = 0
+        total_score = 0
+        active_last_week = 0
+        
+        for enrollment in enrollments:
+            student = enrollment.student
+            student_active_last_week = False
+            
+            # Get student's submissions for this course's assignments
+            submission_data = {}
+            student_total_score = 0
+            graded_assignments = 0
+            submitted_count = 0
+            
+            last_activity = enrollment.enrolled_at
+            
+            for assignment in assignments:
+                submission = Submission.query.filter_by(
+                    student_id=student.id,
+                    assignment_id=assignment.id
+                ).first()
+                
+                # Update last activity if we have a more recent submission
+                if submission:
+                    if submission.submitted_at > last_activity:
+                        last_activity = submission.submitted_at
+                    
+                    submitted_count += 1
+                    grade = Grade.query.filter_by(submission_id=submission.id).first()
+                    
+                    if grade:
+                        student_total_score += grade.score
+                        graded_assignments += 1
+                        total_grades += 1
+                        total_score += grade.score
+                    
+                    # Check if submission was within last week
+                    if (datetime.utcnow() - submission.submitted_at).days <= 7:
+                        student_active_last_week = True
+                
+                if submission:
+                    grade = Grade.query.filter_by(submission_id=submission.id).first()
+                    submission_data[assignment.id] = {
+                        'submitted': True,
+                        'submitted_at': submission.submitted_at,
+                        'grade': grade.score if grade else None,
+                        'graded': True if grade else False
+                    }
+                else:
+                    submission_data[assignment.id] = {
+                        'submitted': False,
+                        'submitted_at': None,
+                        'grade': None,
+                        'graded': False
+                    }
+            
+            # Calculate student statistics
+            avg_score = student_total_score / graded_assignments if graded_assignments > 0 else None
+            completion_rate = (submitted_count / len(assignments)) * 100 if assignments else 0
+            
+            # Add student info to list
+            student_data.append({
+                'student': student,
+                'enrolled_date': enrollment.enrolled_at,
+                'status': enrollment.status,
+                'submissions': submission_data,
+                'average_score': avg_score,
+                'completion_rate': completion_rate,
+                'last_activity': last_activity,
+                'submitted_count': submitted_count,
+                'total_assignments': len(assignments),
+                'total_graded': graded_assignments,
+                'enrollment_id': enrollment.id  # Add enrollment ID for action buttons
+            })
+            
+            total_submissions += submitted_count
+            
+            if student_active_last_week:
+                active_last_week += 1
+        
+        # Calculate course-level statistics
+        approved_enrollments = [e for e in enrollments if e.status == 'approved']
+        course_avg_score = total_score / total_grades if total_grades > 0 else 0
+        course_completion_rate = (total_submissions / (len(approved_enrollments) * len(assignments))) * 100 if approved_enrollments and assignments else 0
+        
+        # Store course data with statistics
+        course_data[course.id] = {
+            'course': course,
+            'students': student_data,
+            'assignments': assignments,
+            'total_students': len(approved_enrollments),
+            'total_pending': len([e for e in enrollments if e.status == 'pending']),
+            'total_assignments': len(assignments),
+            'total_submissions': total_submissions,
+            'average_score': course_avg_score,
+            'completion_rate': course_completion_rate,
+            'active_last_week': active_last_week
+        }
+    
+    return render_template('dashboard/instructor_students.html',
+                         course_data=course_data,
+                         instructor=instructor,
+                         first_course_id=first_course_id,
+                         now=datetime.utcnow(),
+                         datetime=datetime)
+
+@app.route('/instructor/student/<int:course_id>/<int:student_id>')
+@login_required
+@role_required('instructor')
+def student_detail(course_id, student_id):
+    instructor = current_user.instructor_profile
+    course = Course.query.get_or_404(course_id)
+    
+    # Verify instructor owns this course
+    if course.instructor_id != instructor.id:
+        abort(403)
+    
+    student = Student.query.get_or_404(student_id)
+    enrollment = Enrollment.query.filter_by(course_id=course_id, student_id=student_id).first_or_404()
+    
+    # Get student's submissions and grades
+    assignments = Assignment.query.filter_by(course_id=course_id).order_by(Assignment.deadline).all()
+    submissions = []
+    
+    for assignment in assignments:
+        submission = Submission.query.filter_by(
+            student_id=student_id,
+            assignment_id=assignment.id
+        ).first()
+        
+        grade = None
+        if submission:
+            grade = Grade.query.filter_by(submission_id=submission.id).first()
+        
+        submissions.append({
+            'assignment': assignment,
+            'submission': submission,
+            'grade': grade
+        })
+    
+    return render_template('dashboard/student_detail.html',
+                         course=course,
+                         student=student,
+                         enrollment=enrollment,
+                         submissions=submissions,
+                         now=datetime.utcnow())
+
+@app.route('/instructor/course/<int:course_id>/student/<int:student_id>/submissions')
+@login_required
+@role_required('instructor')
+def view_submissions(course_id, student_id):
+    course = Course.query.get_or_404(course_id)
+    student = Student.query.get_or_404(student_id)
+    
+    # Verify instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id:
+        abort(403)
+    
+    # Get all submissions for this student in this course
+    submissions = (Submission.query
+                  .join(Assignment)
+                  .filter(Assignment.course_id == course_id,
+                         Submission.student_id == student_id)
+                  .order_by(Assignment.deadline.desc())
+                  .all())
+    
+    return render_template('submissions/student_submissions.html',
+                         course=course,
+                         student=student,
+                         submissions=submissions)
+
+@app.route('/grade-submission/<int:submission_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('instructor')
+def grade_submission(submission_id):
+    submission = Submission.query.get_or_404(submission_id)
+    assignment = submission.assignment
+    course = assignment.course
+    
+    # Verify instructor owns this course
+    if course.instructor_id != current_user.instructor_profile.id:
+        abort(403)
+    
+    if request.method == 'POST':
+        score = request.form.get('score', type=float)
+        feedback = request.form.get('feedback')
+        
+        if score is None or score < 0 or score > 100:
+            flash('Please enter a valid score between 0 and 100', 'danger')
+            return redirect(url_for('grade_submission', submission_id=submission_id))
+        
+        # Create or update grade
+        grade = Grade.query.filter_by(submission_id=submission_id).first()
+        if grade is None:
+            grade = Grade(submission_id=submission_id, score=score, feedback=feedback)
+            db.session.add(grade)
+        else:
+            grade.score = score
+            grade.feedback = feedback
+            grade.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        flash('Grade saved successfully', 'success')
+        return redirect(url_for('student_detail', 
+                              course_id=course.id,
+                              student_id=submission.student_id))
+    
+    return render_template('submissions/grade.html',
+                         submission=submission,
+                         grade=Grade.query.filter_by(submission_id=submission_id).first())

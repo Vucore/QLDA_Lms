@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.full_name }}'s Submissions - {{ course.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+    .submission-list {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+    }
+
+    .submission-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .submission-item:last-child {
+        border-bottom: none;
+    }
+
+    .grade-badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar">
+                <!-- ... existing sidebar code ... -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('instructor_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('instructor_students') }}">Students</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('student_detail', course_id=course.id, student_id=student.id) }}">
+                            {{ student.full_name }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">Submissions</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>{{ student.full_name }}'s Submissions</h2>
+                <h5 class="text-muted">{{ course.name }}</h5>
+            </div>
+
+            <div class="submission-list">
+                {% if submissions %}
+                {% for submission in submissions %}
+                <div class="submission-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-2">{{ submission.assignment.title }}</h5>
+                            <p class="text-muted mb-2">
+                                Submitted: {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}<br>
+                                Due: {{ submission.assignment.deadline.strftime('%Y-%m-%d %H:%M') }}
+                            </p> {% if submission.grade %}
+                            <span
+                                class="grade-badge {{ 'bg-success' if submission.grade.score >= 90 else 'bg-info' if submission.grade.score >= 75 else 'bg-warning' if submission.grade.score >= 60 else 'bg-danger' }}">
+                                {{ "%.1f"|format(submission.grade.score) }}%
+                            </span>
+                            {% if submission.grade.feedback %}
+                            <p class="mt-2 mb-0"><small class="text-muted">{{ submission.grade.feedback }}</small></p>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-secondary">Not Graded</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            {% if submission.file_url %}
+                            <a href="{{ submission.file_url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                            {% endif %}
+                            {% if not grade %}
+                            <a href="{{ url_for('grade_submission', submission_id=submission.id) }}"
+                                class="btn btn-primary btn-sm">
+                                Grade
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('grade_submission', submission_id=submission.id) }}"
+                                class="btn btn-outline-secondary btn-sm">
+                                Edit Grade
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">No submissions found for this student.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
