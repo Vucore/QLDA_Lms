@@ -16,6 +16,8 @@ from werkzeug.utils import secure_filename
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'courses')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
+logging.basicConfig(level=logging.DEBUG)
+
 # Home page
 @app.route('/')
 def index():
@@ -1039,42 +1041,64 @@ def schedule_create(course_id):
 @login_required
 @role_required('admin')
 def admin_users():
-    users = User.query.all()
-    # Check if admin_settings route exists
+    search_query = request.args.get('search', '').strip()
+    role_filter = request.args.get('role', '').strip()
+
+    query = User.query
+
+    if search_query:
+        query = query.filter(User.username.ilike(f'%{search_query}%') | User.email.ilike(f'%{search_query}%'))
+
+    if role_filter and role_filter in ['student', 'instructor', 'admin']:
+        query = query.filter_by(role=role_filter)
+
+    users = query.all()
+
+    logging.debug(f"Search Query: {search_query}")
+    logging.debug(f"Role Filter: {role_filter}")
+    logging.debug(f"Filtered Users: {[user.username for user in users]}")
+
     has_admin_settings = 'admin_settings' in current_app.view_functions
+
     return render_template('dashboard/admin.html', 
-                         users=users, 
-                         section='users',
-                         has_admin_settings=has_admin_settings)
+                           users=users, 
+                           section='users',
+                           has_admin_settings=has_admin_settings)
 
 @app.route('/admin/courses')
 @login_required
 @role_required('admin')
 def admin_courses():
-    courses = Course.query.all()
+    search_query = request.args.get('search', '').strip()
+
+    if search_query:
+        courses = Course.query.filter(Course.name.ilike(f'%{search_query}%')).all()
+    else:
+        courses = Course.query.all()
+
     instructors = Instructor.query.all()
-      # Calculate some statistics for courses
+
     total_courses = len(courses)
     total_students_enrolled = sum(len([e for e in course.enrollments if e.status == 'approved']) for course in courses)
     avg_students_per_course = total_students_enrolled / total_courses if total_courses > 0 else 0
     courses_with_no_students = sum(1 for course in courses if len([e for e in course.enrollments if e.status == 'approved']) == 0)
-    
+
     course_stats = {
         'total_courses': total_courses,
         'total_students_enrolled': total_students_enrolled,
         'avg_students_per_course': round(avg_students_per_course, 1),
         'courses_with_no_students': courses_with_no_students
     }
-    
-    # Check if admin_settings route exists
+
     has_admin_settings = 'admin_settings' in current_app.view_functions
-    
+
     return render_template('dashboard/admin.html', 
                           courses=courses, 
                           instructors=instructors, 
                           course_stats=course_stats,
                           section='courses',
                           has_admin_settings=has_admin_settings)
+
 
 @app.route('/admin/users/create', methods=['GET', 'POST'])
 @login_required

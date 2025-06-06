@@ -40,9 +40,6 @@
                             <a href="{{ url_for('student_assignments') }}">
                                 <i class="fas fa-tasks"></i> Assignments
                             </a>
-                            {% else %}
-                            <p>No enrolled courses available.</p>
-                            {% endif %}
                         </li>
                         <li>
                             {% if enrolled_courses|length > 0 %}
