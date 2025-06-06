@@ -212,4 +212,16 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+  
+  // Add event listener for "Assignments" navigation item
+  const assignmentsNavItem = document.querySelector('.sidebar-menu a[href*="Assignments"]');
+  if (assignmentsNavItem) {
+    assignmentsNavItem.addEventListener('click', function(event) {
+        event.preventDefault();
+        const assignmentsUrl = assignmentsNavItem.getAttribute('href');
+        if (assignmentsUrl) {
+            window.location.href = assignmentsUrl;
+        }
+    });
+  }
 });

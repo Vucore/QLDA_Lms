@@ -56,4 +56,24 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Search courses by name
+    const searchInputByName = document.querySelector('.form-control');
+    if (searchInputByName) {
+        searchInputByName.addEventListener('input', function() {
+            const searchQuery = this.value.toLowerCase();
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const courseNameCell = row.querySelector('td:nth-child(1)');
+                const courseName = courseNameCell.textContent.toLowerCase();
+
+                if (courseName.includes(searchQuery)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
 });

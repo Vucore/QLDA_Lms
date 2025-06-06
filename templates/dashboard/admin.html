@@ -108,8 +108,10 @@
                     <div class="d-flex justify-content-between mb-3">
                         <div class="d-flex">
                             <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Search courses...">
-                                <button class="btn btn-outline-secondary" type="button">
+                                <input type="text" id="searchCoursesInput" class="form-control"
+                                    placeholder="Search courses...">
+                                <button class="btn btn-outline-secondary" type="button"
+                                    onclick="searchCoursesByName()">
                                     <i class="fas fa-search"></i>
                                 </button>
                             </div>
@@ -252,14 +254,14 @@
                     <div class="d-flex justify-content-between mb-3">
                         <div class="d-flex">
                             <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Search users...">
-                                <button class="btn btn-outline-secondary" type="button">
+                                <input type="text" id="searchInput" class="form-control" placeholder="Search users...">
+                                <button class="btn btn-outline-secondary" type="button" onclick="performSearch()">
                                     <i class="fas fa-search"></i>
                                 </button>
                             </div>
                         </div>
                         <div>
-                            <select class="form-select">
+                            <select id="roleFilter" class="form-select">
                                 <option value="all" selected>All Roles</option>
                                 <option value="student">Students</option>
                                 <option value="instructor">Instructors</option>
@@ -611,4 +613,19 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    function performSearch() {
+    const searchQuery = document.getElementById('searchInput').value.trim();
+    const roleFilter = document.getElementById('roleFilter').value;
+    const url = `/admin/users?search=${encodeURIComponent(searchQuery)}&role=${encodeURIComponent(roleFilter)}`;
+    window.location.href = url;
+}
+
+function searchCoursesByName() {
+    const searchQuery = document.getElementById('searchCoursesInput').value.trim();
+    const url = `/admin/courses?search=${encodeURIComponent(searchQuery)}`;
+    window.location.href = url;
+}
+
+</script>
 {% endblock %}

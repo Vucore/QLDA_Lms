@@ -94,6 +94,15 @@ def migrate_database():
             cursor.execute("UPDATE enrollment SET approved_at = enrolled_at WHERE status = 'approved'")
             logger.info("Added approved_at column")
         
+        # Check if 'full_name' column exists in 'user' table
+        cursor.execute("PRAGMA table_info(user)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+
+        if 'full_name' in column_names:
+            cursor.execute("ALTER TABLE user DROP COLUMN full_name")
+            logger.info("Dropped 'full_name' column from 'user' table")
+
         conn.commit()
         logger.info("Migration completed successfully")
         return True
