@@ -60,3 +60,4 @@ package-lock.json
 *.tmp
 *~
 instance/lms.db
+instance/
