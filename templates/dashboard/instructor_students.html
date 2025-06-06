@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}EduLearn - Student Management{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<style>
+    .course-section {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+    }
+
+    .stats-card {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .badge-status {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.65rem;
+    }
+
+    .badge-pending {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .badge-approved {
+        background-color: #28a745;
+        color: #fff;
+    }
+
+    .badge-rejected {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    .student-table th {
+        background: #f8f9fa;
+        white-space: nowrap;
+    }
+
+    .progress {
+        height: 0.8rem;
+        border-radius: 0.4rem;
+    }
+
+    .student-name {
+        min-width: 150px;
+    }
+
+    .last-active {
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .grade-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="sidebar">
+                <div class="sidebar-user">
+                    <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg" class="mb-3">
+                        <circle cx="40" cy="40" r="40" fill="#f0f0f0" />
+                        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="30"
+                            fill="#2a41e8">
+                            {{ instructor.full_name[:1] }}
+                        </text>
+                    </svg>
+                    <h5>{{ instructor.full_name }}</h5>
+                    <p>Instructor</p>
+                </div>
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="{{ url_for('instructor_dashboard') }}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('instructor_courses') }}">
+                            <i class="fas fa-book"></i> My Courses
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('instructor_assignments') }}">
+                            <i class="fas fa-tasks"></i> Assignments
+                        </a>
+                    </li>
+                    <li>
+                        {% set courses = instructor.courses.all() %}
+                        <a id="schedule-nav-item" {% if courses %}
+                            href="{{ url_for('schedule_index', course_id=courses[0].id) }}" {% else %} href="#" {% endif
+                            %}>
+                            <i class="fas fa-calendar-alt"></i> Schedule
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('instructor_students') }}" class="active">
+                            <i class="fas fa-users"></i> Students
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fas fa-chart-bar"></i> Analytics
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('profile') }}">
+                            <i class="fas fa-user-cog"></i> Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Student Management</h2>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-filter="all">All Students</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="active">Recently Active</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="pending">Pending Approval</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="at-risk">At Risk</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            {% for course_id, data in course_data.items() %}
+            <div class="course-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>{{ data.course.name }}</h3>
+                    {% if data.total_pending > 0 %}
+                    <span class="badge bg-warning">{{ data.total_pending }} pending enrollment(s)</span>
+                    {% endif %}
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>Total Students</h6>
+                            <h3>{{ data.total_students }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>Average Grade</h6>
+                            <h3>{{ "%.1f"|format(data.average_score) }}%</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>Assignment Completion</h6>
+                            <h3>{{ "%.1f"|format(data.completion_rate) }}%</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h6>Active Last Week</h6>
+                            <h3>{{ data.active_last_week }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover student-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Assignments</th>
+                                <th>Grade</th>
+                                <th>Last Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student_info in data.students %}
+                            <tr>
+                                <td class="student-name">
+                                    <div>{{ student_info.student.full_name }}</div>
+                                    <small class="text-muted">{{ student_info.student.user.email }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-status badge-{{ student_info.status }}">
+                                        {{ student_info.status|title }}
+                                    </span>
+                                </td>
+                                <td style="min-width: 200px;">
+                                    <div class="progress">
+                                        <div class="progress-bar {{ 'bg-success' if student_info.completion_rate >= 75 else 'bg-info' if student_info.completion_rate >= 50 else 'bg-warning' if student_info.completion_rate >= 25 else 'bg-danger' }}"
+                                            role="progressbar" style="width: {{ student_info.completion_rate }}%"
+                                            aria-valuenow="{{ student_info.completion_rate }}" aria-valuemin="0"
+                                            aria-valuemax="100">
+                                            {{ "%.1f"|format(student_info.completion_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ student_info.submitted_count }}/{{ student_info.total_assignments }}</div>
+                                    <small class="text-muted">{{ student_info.total_graded }} graded</small>
+                                </td>
+                                <td>
+                                    {% if student_info.average_score is not none %}
+                                    <span
+                                        class="grade-badge {{ 'bg-success' if student_info.average_score >= 90 else 'bg-info' if student_info.average_score >= 75 else 'bg-warning' if student_info.average_score >= 60 else 'bg-danger' }}">
+                                        {{ "%.1f"|format(student_info.average_score) }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No grades</span>
+                                    {% endif %}
+                                </td>
+                                <td class="last-active">
+                                    {% set days_since = ((now - student_info.last_activity).days) %}
+                                    {% if days_since == 0 %}
+                                    Today
+                                    {% elif days_since == 1 %}
+                                    Yesterday
+                                    {% else %}
+                                    {{ student_info.last_activity.strftime('%Y-%m-%d') }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle"
+                                            data-bs-toggle="dropdown">
+                                            Actions
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item"
+                                                    href="{{ url_for('student_detail', course_id=data.course.id, student_id=student_info.student.id) }}">
+                                                    <i class="fas fa-info-circle"></i> View Details
+                                                </a></li>
+                                            <li><a class="dropdown-item"
+                                                    href="{{ url_for('view_submissions', course_id=data.course.id, student_id=student_info.student.id) }}">
+                                                    <i class="fas fa-tasks"></i> View Submissions
+                                                </a></li>
+                                            {% if student_info.status == 'pending' %}
+                                            <li>
+                                                <form
+                                                    action="{{ url_for('approve_enrollment', enrollment_id=student_info.enrollment_id) }}"
+                                                    method="POST" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-success">
+                                                        <i class="fas fa-check"></i> Approve Enrollment
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form
+                                                    action="{{ url_for('reject_enrollment', enrollment_id=student_info.enrollment_id) }}"
+                                                    method="POST" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i class="fas fa-times"></i> Reject Enrollment
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% elif student_info.status == 'approved' %}
+                                            <li>
+                                                <form
+                                                    action="{{ url_for('remove_student_from_course', enrollment_id=student_info.enrollment_id) }}"
+                                                    method="POST" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-danger"
+                                                        onclick="return confirm('Are you sure you want to remove this student from the course?');"></button>
+                                                    <i class="fas fa-user-minus"></i> Remove from Course
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Filter functionality
+        const filterButtons = document.querySelectorAll('[data-filter]');
+        filterButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const filter = button.getAttribute('data-filter');
+                const rows = document.querySelectorAll('.student-table tbody tr');
+
+                rows.forEach(row => {
+                    switch (filter) {
+                        case 'active':
+                            const lastActive = row.querySelector('.last-active').textContent.trim();
+                            row.style.display = (lastActive === 'Today' || lastActive === 'Yesterday') ? '' : 'none';
+                            break;
+                        case 'pending':
+                            const status = row.querySelector('.badge-status').textContent.trim();
+                            row.style.display = (status === 'Pending') ? '' : 'none';
+                            break;
+                        case 'at-risk':
+                            const progress = parseFloat(row.querySelector('.progress-bar').textContent);
+                            row.style.display = (progress < 50) ? '' : 'none';
+                            break;
+                        default:
+                            row.style.display = '';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

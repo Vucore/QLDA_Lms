@@ -43,7 +43,8 @@
                         </li>
                         <li>
                             {% if enrolled_courses|length > 0 %}
-                            <a id="schedule-nav-item" href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) }}">
+                            <a id="schedule-nav-item"
+                                href="{{ url_for('schedule_index', course_id=enrolled_courses[0].id) }}">
                                 <i class="fas fa-calendar-alt"></i> Schedule
                             </a>
                             {% endif %}
@@ -82,19 +83,19 @@
                 <div class="row mb-4">
                     <div class="col-md-3 col-sm-6">
                         <div class="stats-card">
-                            <h2>{{ enrolled_courses|length }}</h2>
+                            <h2>{{ enrolled_courses|length - total_completed_courses }}</h2>
                             <p>Courses in Progress</p>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6">
                         <div class="stats-card">
-                            <h2>12</h2>
+                            <h2>{{ total_completed_courses }}</h2>
                             <p>Completed Courses</p>
                         </div>
                     </div>
                     <div class="col-md-3 col-sm-6">
                         <div class="stats-card">
-                            <h2>156</h2>
+                            <h2>{{ total_hours }}</h2>
                             <p>Hours Learned</p>
                         </div>
                     </div>

@@ -35,13 +35,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return new bootstrap.Popover(popoverTriggerEl);
   });
 
-  // Auto-hide flash messages after 5 seconds
+  // Flash messages will stay until manually closed
   const flashMessages = document.querySelectorAll('.alert:not(.alert-permanent)');
   flashMessages.forEach(message => {
-    setTimeout(() => {
-      const alert = new bootstrap.Alert(message);
-      alert.close();
-    }, 5000);
+    message.classList.add('show');
   });
 
   // Toggle search form on small screens

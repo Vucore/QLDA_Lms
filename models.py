@@ -26,8 +26,8 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    student_profile = db.relationship('Student', backref='user', uselist=False)
-    instructor_profile = db.relationship('Instructor', backref='user', uselist=False)
+    student_profile = db.relationship('Student', backref='user', uselist=False, cascade='all, delete-orphan')
+    instructor_profile = db.relationship('Instructor', backref='user', uselist=False, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -51,7 +51,7 @@ class Student(db.Model):
     
     # Relationships
     enrollments = db.relationship('Enrollment', back_populates='student', cascade='all, delete-orphan')
-    submissions = db.relationship('Submission', backref='student', lazy='dynamic')
+    submissions = db.relationship('Submission', backref='student', lazy='dynamic', cascade='all, delete-orphan')
 
 class Instructor(db.Model):
     id = db.Column(db.Integer, primary_key=True)

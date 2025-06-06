@@ -229,29 +229,58 @@ main {
 }
 
 /* Flash messages */
+.alert-container {
+  position: fixed;
+  top: 80px;
+  /* Below navbar */
+  right: 20px;
+  max-width: 100%;
+  width: 350px;
+  z-index: 1040;
+  /* Below navbar z-index */
+  pointer-events: none;
+  /* Let clicks pass through the container */
+}
+
 .alert {
   border-radius: 8px;
   box-shadow: 0 4px 15px var(--shadow-color);
-<<<<<<< HEAD
-=======
-  transition: opacity 0.15s linear;
+  transition: all 0.3s ease-in-out;
+  opacity: 1;
+  margin-bottom: 10px;
+  pointer-events: auto;
+  /* Make alerts clickable */
 }
 
 .alert.hide {
   opacity: 0;
+  transform: translateX(100%);
 }
 
 .alert.show {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .alert .btn-close {
   transition: opacity 0.15s linear;
+  padding: 12px;
 }
 
 .alert .btn-close:hover {
   opacity: 0.8;
->>>>>>> vucore
+}
+
+@media (max-width: 576px) {
+  .alert-container {
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+
+  .alert {
+    margin-bottom: 5px;
+  }
 }
 
 /* Category icons */
